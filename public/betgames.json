@@ -1,0 +1,352 @@
+[
+  {
+    "home_team": "Manchester Utd",
+    "away_team": "Ipswich",
+    "home_win": 1.37,
+    "draw": 5.19,
+    "away_win": 7.11
+  },
+  {
+    "home_team": "Real Madrid",
+    "away_team": "Malaga",
+    "home_win": 1.10,
+    "draw": 11.50,
+    "away_win": 24.92
+  },
+  {
+    "home_team": "Chelsea",
+    "away_team": "Brighton",
+    "home_win": 1.86,
+    "draw": 3.80,
+    "away_win": 3.85
+  },
+  {
+    "home_team": "Cagliari",
+    "away_team": "Inter",
+    "home_win": 7.29,
+    "draw": 4.70,
+    "away_win": 1.45
+  },
+  {
+    "home_team": "Napoli",
+    "away_team": "Como",
+    "home_win": 2.55,
+    "draw": 3.05,
+    "away_win": 3.10
+  },
+  {
+    "home_team": "Sunderland",
+    "away_team": "Fulham",
+    "home_win": 2.32,
+    "draw": 3.25,
+    "away_win": 3.10
+  },
+  {
+    "home_team": "Leeds",
+    "away_team": "Brentford",
+    "home_win": 2.80,
+    "draw": 3.40,
+    "away_win": 2.44
+  },
+  {
+    "home_team": "Paris FC",
+    "away_team": "Nice",
+    "home_win": 2.08,
+    "draw": 3.40,
+    "away_win": 3.75
+  },
+  {
+    "home_team": "SC Freiburg",
+    "away_team": "Werder Bremen",
+    "home_win": 1.80,
+    "draw": 3.85,
+    "away_win": 4.40
+  },
+  {
+    "home_team": "Rennes",
+    "away_team": "Le Mans",
+    "home_win": 1.43,
+    "draw": 5.20,
+    "away_win": 6.80
+  },
+  {
+    "home_team": "Augsburg",
+    "away_team": "Schalke 04",
+    "home_win": 2.25,
+    "draw": 3.55,
+    "away_win": 3.20
+  },
+  {
+    "home_team": "Deportivo La Coruna",
+    "away_team": "Valencia",
+    "home_win": 2.60,
+    "draw": 3.00,
+    "away_win": 3.10
+  },
+  {
+    "home_team": "Lazio",
+    "away_team": "Genoa",
+    "home_win": 2.37,
+    "draw": 2.95,
+    "away_win": 3.60
+  },
+  {
+    "home_team": "Monaco",
+    "away_team": "Marseille",
+    "home_win": 2.24,
+    "draw": 3.70,
+    "away_win": 3.10
+  },
+  {
+    "home_team": "Celta Vigo",
+    "away_team": "Athletic Bilbao",
+    "home_win": 2.75,
+    "draw": 3.20,
+    "away_win": 2.75
+  },
+  {
+    "home_team": "Telstar",
+    "away_team": "Ajax",
+    "home_win": 6.20,
+    "draw": 5.20,
+    "away_win": 1.40
+  },
+  {
+    "home_team": "Feyenoord",
+    "away_team": "ADO Den Haag",
+    "home_win": 1.17,
+    "draw": 7.60,
+    "away_win": 12.00
+  },
+  {
+    "home_team": "Stabaek Fotball 2",
+    "away_team": "Staal Jorpeland",
+    "home_win": 1.54,
+    "draw": 4.60,
+    "away_win": 3.95
+  },
+  {
+    "home_team": "Brodd",
+    "away_team": "Viking FK 2",
+    "home_win": 2.07,
+    "draw": 3.85,
+    "away_win": 2.65
+  },
+  {
+    "home_team": "FC Sion",
+    "away_team": "FC Lugano",
+    "home_win": 2.31,
+    "draw": 3.55,
+    "away_win": 2.75
+  },
+  {
+    "home_team": "GrIFK/Akatemia",
+    "away_team": "Hoogee",
+    "home_win": 1.30,
+    "draw": 5.20,
+    "away_win": 6.40
+  },
+  {
+    "home_team": "Honefoss",
+    "away_team": "Follo",
+    "home_win": 1.26,
+    "draw": 5.80,
+    "away_win": 6.60
+  },
+  {
+    "home_team": "Konnerud",
+    "away_team": "Baerum",
+    "home_win": 5.20,
+    "draw": 5.20,
+    "away_win": 1.36
+  },
+  {
+    "home_team": "FK Karlskrona",
+    "away_team": "IFK Berga",
+    "home_win": 1.50,
+    "draw": 4.20,
+    "away_win": 4.80
+  },
+  {
+    "home_team": "FC Nomme United",
+    "away_team": "FC Elva",
+    "home_win": 2.25,
+    "draw": 3.85,
+    "away_win": 2.41
+  },
+  {
+    "home_team": "Tallinna JK Legion",
+    "away_team": "Parnu JK Vaprus II",
+    "home_win": 4.40,
+    "draw": 4.70,
+    "away_win": 1.47
+  },
+  {
+    "home_team": "Rodina Moscow",
+    "away_team": "Baltika Kaliningrad",
+    "home_win": 2.95,
+    "draw": 3.00,
+    "away_win": 2.26
+  },
+  {
+    "home_team": "Eidsvold Turn",
+    "away_team": "Grorud IL",
+    "home_win": 1.80,
+    "draw": 3.70,
+    "away_win": 3.40
+  },
+  {
+    "home_team": "Liverpool U21",
+    "away_team": "Leeds United U21",
+    "home_win": 1.49,
+    "draw": 4.40,
+    "away_win": 4.50
+  },
+  {
+    "home_team": "Celtic W",
+    "away_team": "Hibernian W",
+    "home_win": 2.02,
+    "draw": 3.35,
+    "away_win": 3.05
+  },
+  {
+    "home_team": "JK Tallinna Kalev II",
+    "away_team": "Viljandi Tulevik",
+    "home_win": 1.79,
+    "draw": 4.30,
+    "away_win": 3.00
+  },
+  {
+    "home_team": "Lyngby BK",
+    "away_team": "Odense BK",
+    "home_win": 2.05,
+    "draw": 3.70,
+    "away_win": 3.20
+  },
+  {
+    "home_team": "Aberdeen W",
+    "away_team": "Partick Thistle LFC W",
+    "home_win": 3.50,
+    "draw": 3.70,
+    "away_win": 1.77
+  },
+  {
+    "home_team": "Skive IK",
+    "away_team": "Naestved BK",
+    "home_win": 2.65,
+    "draw": 3.20,
+    "away_win": 2.32
+  },
+  {
+    "home_team": "Dinamo Minsk Reserve",
+    "away_team": "Smorgon",
+    "home_win": 2.15,
+    "draw": 3.55,
+    "away_win": 2.65
+  },
+  {
+    "home_team": "FC Widnau",
+    "away_team": "FC Collina D Oro",
+    "home_win": 2.85,
+    "draw": 3.40,
+    "away_win": 2.09
+  },
+  {
+    "home_team": "AIK Football",
+    "away_team": "Hammarby",
+    "home_win": 6.80,
+    "draw": 5.00,
+    "away_win": 1.36
+  },
+  {
+    "home_team": "IF Brommapojkarna W",
+    "away_team": "Pitea W",
+    "home_win": 2.43,
+    "draw": 3.25,
+    "away_win": 2.48
+  },
+  {
+    "home_team": "Irtysh Pavlodar",
+    "away_team": "Aktobe",
+    "home_win": 2.55,
+    "draw": 3.35,
+    "away_win": 2.33
+  },
+  {
+    "home_team": "FK Kaspiy Aktau",
+    "away_team": "Tobol Kostanay",
+    "home_win": 2.80,
+    "draw": 3.30,
+    "away_win": 2.16
+  },
+  {
+    "home_team": "Silkeborg IF",
+    "away_team": "FC Midtjylland",
+    "home_win": 7.40,
+    "draw": 5.40,
+    "away_win": 1.33
+  },
+  {
+    "home_team": "FFC Frankfurt W",
+    "away_team": "1. FC Nuremberg W",
+    "home_win": 1.16,
+    "draw": 6.80,
+    "away_win": 9.40
+  },
+  {
+    "home_team": "Aarhus Fremad",
+    "away_team": "Vejle BK",
+    "home_win": 3.50,
+    "draw": 3.60,
+    "away_win": 1.80
+  },
+  {
+    "home_team": "Glasgow City W",
+    "away_team": "Spartans W",
+    "home_win": 1.01,
+    "draw": 11.00,
+    "away_win": 25.00
+  },
+  {
+    "home_team": "Linderud-Grei W",
+    "away_team": "Klepp W",
+    "home_win": 1.40,
+    "draw": 4.60,
+    "away_win": 5.20
+  },
+  {
+    "home_team": "Melaka FC",
+    "away_team": "Negeri Sembilan",
+    "home_win": 3.55,
+    "draw": 3.30,
+    "away_win": 1.87
+  },
+  {
+    "home_team": "Arka Gdynia",
+    "away_team": "Polonia Bytom SA",
+    "home_win": 1.73,
+    "draw": 3.55,
+    "away_win": 3.90
+  },
+  {
+    "home_team": "Bodo/Glimt",
+    "away_team": "Rosenborg",
+    "home_win": 1.31,
+    "draw": 5.80,
+    "away_win": 7.00
+  },
+  {
+    "home_team": "LNZ Lebedyn",
+    "away_team": "Veres Rivne",
+    "home_win": 1.41,
+    "draw": 3.90,
+    "away_win": 6.60
+  },
+  {
+    "home_team": "Willem II",
+    "away_team": "SC Heerenveen",
+    "home_win": 3.85,
+    "draw": 4.10,
+    "away_win": 1.76
+  }
+]
