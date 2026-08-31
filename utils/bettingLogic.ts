@@ -5,6 +5,7 @@ export type RawGame = {
   draw: string | number;
   away_win: string | number;
   boosted?: boolean;
+  kickoff?: string;
 };
 
 export type FormattedGame = {
@@ -133,6 +134,117 @@ export function matchesTeamSearch(game: FormattedGame, query: string) {
 
 export function isHomeFavorite(game: FormattedGame) {
   return Number(game.originalData.home_win) <= Number(game.originalData.away_win);
+}
+
+export function parseKickoff(value?: string | number | null) {
+  if (value == null || value === "") {
+    return null;
+  }
+
+  const date =
+    typeof value === "number"
+      ? new Date(value < 1e12 ? value * 1000 : value)
+      : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function dateKeyFromDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function todayDateKey() {
+  return dateKeyFromDate(new Date());
+}
+
+export function gameKickoff(game: FormattedGame) {
+  return parseKickoff(game.originalData.kickoff);
+}
+
+export function gameDateKey(game: FormattedGame) {
+  const kickoff = gameKickoff(game);
+  return kickoff ? dateKeyFromDate(kickoff) : null;
+}
+
+export function formatKickoff(game: FormattedGame) {
+  const kickoff = gameKickoff(game);
+  if (!kickoff) {
+    return null;
+  }
+
+  const key = dateKeyFromDate(kickoff);
+  const time = kickoff.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (key === todayDateKey()) {
+    return `Today · ${time}`;
+  }
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (key === dateKeyFromDate(tomorrow)) {
+    return `Tomorrow · ${time}`;
+  }
+
+  const day = kickoff.toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+  return `${day} · ${time}`;
+}
+
+export function formatDateChip(dateKey: string) {
+  if (dateKey === "all") {
+    return "All dates";
+  }
+
+  if (dateKey === todayDateKey()) {
+    return "Today";
+  }
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (dateKey === dateKeyFromDate(tomorrow)) {
+    return "Tomorrow";
+  }
+
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+export function availableDateKeys(games: FormattedGame[]) {
+  const keys = new Set<string>();
+  for (const game of games) {
+    const key = gameDateKey(game);
+    if (key) {
+      keys.add(key);
+    }
+  }
+  return [...keys].sort();
+}
+
+export function filterGamesByDate(games: FormattedGame[], dateKey: string) {
+  if (dateKey === "all") {
+    return games;
+  }
+
+  const dated = games.filter((game) => gameDateKey(game));
+  if (dated.length === 0) {
+    return games;
+  }
+
+  return games.filter((game) => gameDateKey(game) === dateKey);
 }
 
 export const MARKET_KEYS: MarketKey[] = ["w", "d", "l"];

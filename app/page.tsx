@@ -3,13 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   applyGameOverrides,
+  availableDateKeys,
   COVER_MULTIPLIER,
   createNineAnchorOdds,
   failsafeMarketsFor,
+  filterGamesByDate,
   formatAndIdentifyGames,
+  formatKickoff,
+  gameKickoff,
   gameTitle,
   MARKET_KEYS,
   needsCoverBoost,
+  todayDateKey,
 } from "@/utils/bettingLogic";
 import type {
   FormattedGame,
@@ -18,6 +23,7 @@ import type {
   MarketKey,
   RawGame,
 } from "@/utils/bettingLogic";
+import DateFilterChips from "@/app/components/DateFilterChips";
 import GameSelectModal from "@/app/components/GameSelectModal";
 import { ChevronLeft, ChevronRight, Plus, Search, Trash2 } from "lucide-react";
 
@@ -67,19 +73,27 @@ const emptyIdentifiedGames: IdentifiedGames = {
 };
 
 function oddsDetail(game: FormattedGame) {
-  return `W ${game.w.toFixed(2)} · D ${game.d.toFixed(2)} · L ${game.l.toFixed(2)}${
+  const kickoff = formatKickoff(game);
+  const odds = `W ${game.w.toFixed(2)} · D ${game.d.toFixed(2)} · L ${game.l.toFixed(2)}${
     game.originalData.boosted ? " · boosted" : ""
   }`;
+  return kickoff ? `${kickoff} · ${odds}` : odds;
 }
 
 function sortGames(games: FormattedGame[]) {
-  return [...games].sort((a, b) =>
-    `${a.originalData.home_team} ${a.originalData.away_team}`
+  return [...games].sort((a, b) => {
+    const aKickoff = gameKickoff(a)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    const bKickoff = gameKickoff(b)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    if (aKickoff !== bKickoff) {
+      return aKickoff - bKickoff;
+    }
+
+    return `${a.originalData.home_team} ${a.originalData.away_team}`
       .toLowerCase()
       .localeCompare(
         `${b.originalData.home_team} ${b.originalData.away_team}`.toLowerCase()
-      )
-  );
+      );
+  });
 }
 
 export default function Home() {
@@ -95,11 +109,27 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [gamesSource, setGamesSource] = useState<GamesSource>("loading");
   const [picker, setPicker] = useState<PickerTarget | null>(null);
+  const [dateFilter, setDateFilter] = useState(todayDateKey);
   const itemsPerPage = 5;
 
   const games = useMemo(
     () => applyGameOverrides(classified, overrides),
     [classified, overrides]
+  );
+
+  const allGames = useMemo(
+    () => [...games.anchors, ...games.hedges, ...games.unicorns, ...games.others],
+    [games]
+  );
+  const matchDates = useMemo(() => availableDateKeys(allGames), [allGames]);
+  const visibleGames = useMemo(
+    () => ({
+      anchors: filterGamesByDate(games.anchors, dateFilter),
+      hedges: filterGamesByDate(games.hedges, dateFilter),
+      unicorns: filterGamesByDate(games.unicorns, dateFilter),
+      others: filterGamesByDate(games.others, dateFilter),
+    }),
+    [dateFilter, games]
   );
 
   useEffect(() => {
@@ -180,13 +210,16 @@ export default function Home() {
     };
   }, []);
 
-  const sortedAnchors = useMemo(() => sortGames(games.anchors), [games.anchors]);
+  const sortedAnchors = useMemo(
+    () => sortGames(visibleGames.anchors),
+    [visibleGames.anchors]
+  );
   const extraGames = useMemo(() => {
     if (extraCategory === "others") {
-      return sortGames(games.others);
+      return sortGames(visibleGames.others);
     }
-    return sortGames(games[extraCategory]);
-  }, [extraCategory, games]);
+    return sortGames(visibleGames[extraCategory]);
+  }, [extraCategory, visibleGames]);
 
   const selectedExtraGame = useMemo(
     () => extraGames.find((game) => game.id === extraGameId) ?? extraGames[0] ?? null,
@@ -370,7 +403,7 @@ export default function Home() {
 
   const handleExtraCategoryChange = (nextCategory: ExtraCategory) => {
     setExtraCategory(nextCategory);
-    const nextGames = sortGames(games[nextCategory]);
+    const nextGames = sortGames(visibleGames[nextCategory]);
     setExtraGameId(nextGames[0]?.id ?? "");
   };
 
@@ -472,6 +505,17 @@ export default function Home() {
                 <Trash2 size={14} />
                 Clear
               </button>
+            </div>
+
+            <div className="mb-5">
+              <div className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                Match date
+              </div>
+              <DateFilterChips
+                dates={matchDates}
+                value={dateFilter}
+                onChange={setDateFilter}
+              />
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -657,7 +701,7 @@ export default function Home() {
                     }
                     detail={
                       extraCategory === "others"
-                        ? `${games.others.length} matches not auto-classified`
+                        ? `${visibleGames.others.length} matches not auto-classified`
                         : selectedExtraGame
                           ? oddsDetail(selectedExtraGame)
                           : extraGames.length
@@ -698,6 +742,11 @@ export default function Home() {
                           <h4 className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-50">
                             {gameTitle(leg.game)}
                           </h4>
+                          {formatKickoff(leg.game) ? (
+                            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                              {formatKickoff(leg.game)}
+                            </p>
+                          ) : null}
                         </div>
                         <button
                           className="rounded-md p-1.5 text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/30"
@@ -866,6 +915,11 @@ export default function Home() {
                     <h3 className="mt-1 text-base font-bold text-zinc-900 dark:text-zinc-50">
                       {gameTitle(leg.game)}
                     </h3>
+                    {formatKickoff(leg.game) ? (
+                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        {formatKickoff(leg.game)}
+                      </p>
+                    ) : null}
                     <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                       Extra leg uses {MARKET_TITLES[leg.market]}. Cover the remaining
                       outcomes below.
@@ -943,7 +997,7 @@ export default function Home() {
             : picker
               ? extraCategory === picker
                 ? extraGames
-                : sortGames(games[picker])
+                : sortGames(visibleGames[picker])
               : []
         }
         selectedId={
@@ -962,10 +1016,13 @@ export default function Home() {
         }
         emptyLabel={
           picker === "others"
-            ? "No unclassified matches match that team name"
-            : "No matches match that team name"
+            ? "No unclassified matches match that team or date"
+            : "No matches match that team or date"
         }
         mode={picker === "others" ? "classify" : "select"}
+        dateFilter={dateFilter}
+        dates={matchDates}
+        onDateFilterChange={setDateFilter}
         onClose={() => setPicker(null)}
         onSelect={handlePickerSelect}
         onClassify={classifyOther}

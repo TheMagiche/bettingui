@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import {
+  formatKickoff,
   gameTitle,
   isHomeFavorite,
   MARKET_KEYS,
   matchesTeamSearch,
 } from "@/utils/bettingLogic";
 import type { FormattedGame, GameBucket } from "@/utils/bettingLogic";
+import DateFilterChips from "@/app/components/DateFilterChips";
 
 const MARKET_LABELS = {
   w: "Win",
@@ -31,6 +33,9 @@ type GameSelectModalProps = {
   disabledIds?: string[];
   emptyLabel?: string;
   mode?: "select" | "classify";
+  dateFilter?: string;
+  dates?: string[];
+  onDateFilterChange?: (value: string) => void;
   onClose: () => void;
   onSelect?: (game: FormattedGame) => void;
   onClassify?: (game: FormattedGame, bucket: GameBucket) => void;
@@ -76,6 +81,9 @@ export default function GameSelectModal({
   disabledIds = [],
   emptyLabel = "No matches found",
   mode = "select",
+  dateFilter,
+  dates = [],
+  onDateFilterChange,
   onClose,
   onSelect,
   onClassify,
@@ -153,6 +161,16 @@ export default function GameSelectModal({
             </button>
           </div>
 
+          {onDateFilterChange && dateFilter ? (
+            <div className="mt-4">
+              <DateFilterChips
+                dates={dates}
+                value={dateFilter}
+                onChange={onDateFilterChange}
+              />
+            </div>
+          ) : null}
+
           <label className="mt-4 flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800">
             <Search size={16} className="shrink-0 text-zinc-400" />
             <input
@@ -179,6 +197,7 @@ export default function GameSelectModal({
               {filtered.map((game) => {
                 const disabled = disabledIds.includes(game.id);
                 const selected = selectedId === game.id;
+                const kickoff = formatKickoff(game);
 
                 return (
                   <div
@@ -202,6 +221,7 @@ export default function GameSelectModal({
                           ) : null}
                         </div>
                         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                          {kickoff ? `${kickoff} · ` : ""}
                           {game.originalData.home_team} (home) ·{" "}
                           {game.originalData.away_team} (away)
                         </p>

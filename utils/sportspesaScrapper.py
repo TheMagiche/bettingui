@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import datetime, timezone
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -113,6 +114,13 @@ def map_event(event):
         }
         if event.get("boosted"):
             game["boosted"] = True
+        kickoff = event.get("date")
+        if not kickoff and event.get("dateTimestamp"):
+            kickoff = datetime.fromtimestamp(
+                event["dateTimestamp"], tz=timezone.utc
+            ).isoformat()
+        if kickoff:
+            game["kickoff"] = kickoff
         return game
     except (KeyError, TypeError, ValueError):
         return None

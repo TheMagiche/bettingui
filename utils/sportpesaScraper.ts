@@ -34,6 +34,8 @@ type SportpesaMarket = {
 type SportpesaEvent = {
   id?: number | string;
   boosted?: boolean;
+  date?: string;
+  dateTimestamp?: number;
   competitors?: SportpesaCompetitor[];
   markets?: SportpesaMarket[];
 };
@@ -123,6 +125,12 @@ function mapEvent(event: SportpesaEvent): RawGame | null {
     return null;
   }
 
+  const kickoffDate =
+    event.date ||
+    (typeof event.dateTimestamp === "number"
+      ? new Date(event.dateTimestamp * 1000).toISOString()
+      : undefined);
+
   return {
     home_team: home.name.trim(),
     away_team: away.name.trim(),
@@ -130,6 +138,7 @@ function mapEvent(event: SportpesaEvent): RawGame | null {
     draw,
     away_win: awayWin,
     boosted: Boolean(event.boosted),
+    kickoff: kickoffDate,
   };
 }
 
