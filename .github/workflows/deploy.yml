@@ -61,8 +61,7 @@ jobs:
           source: "docker-compose.yml,nginx/default.conf"
           target: "bettingui"
           overwrite: true
-      - name: Silent Docker Login
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login --password-stdin 2>/dev/null
+
       - name: Deploy image to Linode
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -81,12 +80,17 @@ jobs:
             set -eu
             cd "$HOME/bettingui"
 
-            printf '%s\n' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            DOCKER_CONFIG=$(mktemp -d)
+            export DOCKER_CONFIG
+            trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+            chmod 700 "$DOCKER_CONFIG"
+            auth=$(printf '%s' "$GHCR_USER:$GHCR_TOKEN" | openssl base64 -A)
+            printf '{"auths":{"ghcr.io":{"auth":"%s"}}}\n' "$auth" > "$DOCKER_CONFIG/config.json"
+            chmod 600 "$DOCKER_CONFIG/config.json"
 
             docker compose pull
             docker compose up -d --remove-orphans --no-build
 
-            docker logout ghcr.io >/dev/null 2>&1 || true
             docker image prune -f
 
             for i in 1 2 3 4 5 6 7 8 9 10; do
