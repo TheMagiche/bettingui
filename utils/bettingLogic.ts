@@ -1,4 +1,4 @@
-type RawGame = {
+export type RawGame = {
   home_team: string;
   away_team: string;
   home_win: string | number;

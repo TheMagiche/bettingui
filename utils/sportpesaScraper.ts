@@ -1,0 +1,253 @@
+import { spawn, type ChildProcess } from "node:child_process";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import CDP from "chrome-remote-interface";
+import type { RawGame } from "./bettingLogic";
+
+const SPORTPESA_PAGE =
+  "https://www.ke.sportpesa.com/en/sports-betting/football-1/";
+const PAGE_SIZE = 15;
+const SPORTPESA_ENDPOINTS = [
+  `https://www.ke.sportpesa.com/api/upcoming/games?type=prematch&sportId=1&section=upcoming&markets_layout=multiple&o=startTime&pag_count=${PAGE_SIZE}&pag_min=`,
+  `https://www.ke.sportpesa.com/api/todays/1/games?type=prematch&section=today&markets_layout=multiple&o=startTime&pag_count=${PAGE_SIZE}&pag_min=`,
+];
+const USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+type SportpesaCompetitor = {
+  name?: string;
+  home?: boolean;
+};
+
+type SportpesaSelection = {
+  name?: string;
+  shortName?: string;
+  odds?: number | string;
+};
+
+type SportpesaMarket = {
+  name?: string;
+  selections?: SportpesaSelection[];
+};
+
+type SportpesaEvent = {
+  id?: number | string;
+  competitors?: SportpesaCompetitor[];
+  markets?: SportpesaMarket[];
+};
+
+function chromePath() {
+  if (process.env.CHROME_PATH) {
+    return process.env.CHROME_PATH;
+  }
+
+  if (process.platform === "darwin") {
+    return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  }
+
+  if (process.platform === "win32") {
+    return "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+  }
+
+  return "google-chrome";
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForDebugger(port: number, timeoutMs = 15000) {
+  const started = Date.now();
+
+  while (Date.now() - started < timeoutMs) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/json/version`);
+      if (response.ok) {
+        return;
+      }
+    } catch {
+      // Chrome is still starting
+    }
+
+    await sleep(200);
+  }
+
+  throw new Error(`Chrome debugger did not start on port ${port}`);
+}
+
+function parseOdds(value: unknown) {
+  const odds =
+    typeof value === "number" ? value : Number.parseFloat(String(value ?? ""));
+  return Number.isFinite(odds) && odds > 1 ? odds : null;
+}
+
+function marketLooksLike1x2(market: SportpesaMarket) {
+  const name = market.name?.toLowerCase() ?? "";
+  return /1\s*x\s*2|3\s*-?\s*way|match result|full time/.test(name);
+}
+
+function selectionKey(selection: SportpesaSelection) {
+  return `${selection.shortName ?? ""} ${selection.name ?? ""}`.trim();
+}
+
+function mapEvent(event: SportpesaEvent): RawGame | null {
+  const competitors = event.competitors ?? [];
+  const home = competitors.find((team) => team.home) ?? competitors[0];
+  const away = competitors.find((team) => team !== home) ?? competitors[1];
+
+  if (!home?.name || !away?.name) {
+    return null;
+  }
+
+  const markets = event.markets ?? [];
+  const market = markets.find(marketLooksLike1x2) ?? markets[0];
+  const selections = market?.selections ?? [];
+
+  if (selections.length < 3) {
+    return null;
+  }
+
+  const byPattern = (pattern: RegExp) =>
+    selections.find((selection) => pattern.test(selectionKey(selection)));
+
+  const homeWin =
+    parseOdds(byPattern(/^1\b|home/i)?.odds) ?? parseOdds(selections[0]?.odds);
+  const draw =
+    parseOdds(byPattern(/^x\b|draw/i)?.odds) ?? parseOdds(selections[1]?.odds);
+  const awayWin =
+    parseOdds(byPattern(/^2\b|away/i)?.odds) ?? parseOdds(selections[2]?.odds);
+
+  if (homeWin === null || draw === null || awayWin === null) {
+    return null;
+  }
+
+  return {
+    home_team: home.name.trim(),
+    away_team: away.name.trim(),
+    home_win: homeWin,
+    draw,
+    away_win: awayWin,
+  };
+}
+
+function launchChrome(port: number, userDataDir: string): ChildProcess {
+  return spawn(
+    chromePath(),
+    [
+      "--headless=new",
+      "--disable-gpu",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-dev-shm-usage",
+      "--disable-background-networking",
+      "--window-size=1920,1080",
+      `--user-agent=${USER_AGENT}`,
+      `--remote-debugging-port=${port}`,
+      `--user-data-dir=${userDataDir}`,
+    ],
+    {
+      stdio: "ignore",
+    }
+  );
+}
+
+const FETCH_GAMES_SCRIPT = `
+(async () => {
+  const endpoints = ${JSON.stringify(SPORTPESA_ENDPOINTS)};
+  const pageSize = ${PAGE_SIZE};
+  const events = [];
+  const seen = new Set();
+
+  for (const base of endpoints) {
+    for (let page = 0; page < 8; page += 1) {
+      try {
+        const response = await fetch(base + (page * pageSize + 1), {
+          headers: { Accept: "application/json" },
+        });
+        if (response.status !== 200 && response.status !== 206) {
+          break;
+        }
+        const data = await response.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          break;
+        }
+        for (const event of data) {
+          const key = String(event.id ?? JSON.stringify(event.competitors));
+          if (!seen.has(key)) {
+            seen.add(key);
+            events.push(event);
+          }
+        }
+        if (data.length < pageSize) {
+          break;
+        }
+      } catch (error) {
+        break;
+      }
+    }
+  }
+
+  return JSON.stringify(events);
+})()
+`;
+
+export async function scrapeSportpesaGames(): Promise<RawGame[]> {
+  const port = 9300 + Math.floor(Math.random() * 700);
+  const userDataDir = await mkdtemp(join(tmpdir(), "sportpesa-chrome-"));
+  const chrome = launchChrome(port, userDataDir);
+  let client: CDP.Client | undefined;
+
+  try {
+    await waitForDebugger(port);
+    client = await CDP({ host: "127.0.0.1", port });
+    const { Page, Runtime } = client;
+    await Page.enable();
+    await Runtime.enable();
+    await Page.navigate({ url: SPORTPESA_PAGE });
+    await Page.loadEventFired();
+
+    const deadline = Date.now() + 25000;
+    let payload = "[]";
+
+    while (Date.now() < deadline) {
+      const result = await Runtime.evaluate({
+        expression: FETCH_GAMES_SCRIPT,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+
+      if (result.exceptionDetails) {
+        await sleep(1500);
+        continue;
+      }
+
+      const value = result.result.value;
+      if (typeof value === "string" && value.length > 2) {
+        payload = value;
+        break;
+      }
+
+      await sleep(1500);
+    }
+
+    const events = JSON.parse(payload) as SportpesaEvent[];
+    if (!Array.isArray(events)) {
+      throw new Error("SportPesa returned an unexpected payload");
+    }
+
+    const games = events
+      .map(mapEvent)
+      .filter((game): game is RawGame => game !== null);
+
+    if (games.length === 0) {
+      throw new Error("SportPesa scrape returned no 1X2 markets");
+    }
+
+    return games;
+  } finally {
+    await client?.close().catch(() => undefined);
+    chrome.kill("SIGTERM");
+    await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}

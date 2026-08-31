@@ -10,7 +10,7 @@ import {
   MARKET_KEYS,
   needsCoverBoost,
 } from "@/utils/bettingLogic";
-import type { FormattedGame, MarketKey } from "@/utils/bettingLogic";
+import type { FormattedGame, MarketKey, RawGame } from "@/utils/bettingLogic";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 
 type IdentifiedGames = {
@@ -20,6 +20,7 @@ type IdentifiedGames = {
 };
 
 type ExtraCategory = "hedges" | "unicorns";
+type GamesSource = "live" | "fallback" | "loading";
 
 type ExtraLeg = {
   id: string;
@@ -78,35 +79,79 @@ export default function Home() {
   const [extraCategory, setExtraCategory] = useState<ExtraCategory>("hedges");
   const [extraGameId, setExtraGameId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [gamesSource, setGamesSource] = useState<GamesSource>("loading");
   const itemsPerPage = 5;
 
   useEffect(() => {
-    fetch("/betgames.json")
-      .then((res) => res.json())
-      .then((data) => {
-        const formatted = formatAndIdentifyGames(data);
-        setGames(formatted);
+    let cancelled = false;
+    let liveApplied = false;
 
-        const sortedAnchors = sortGames(formatted.anchors);
-        setAnchorAId((current) =>
-          current && sortedAnchors.some((game) => game.id === current)
-            ? current
-            : ""
-        );
-        setAnchorBId((current) =>
-          current && sortedAnchors.some((game) => game.id === current)
-            ? current
-            : ""
-        );
+    const applyGames = (data: RawGame[]) => {
+      const formatted = formatAndIdentifyGames(data);
+      setGames(formatted);
 
-        const sortedExtras = sortGames(formatted.hedges);
-        setExtraGameId((current) =>
-          current && sortedExtras.some((game) => game.id === current)
-            ? current
-            : sortedExtras[0]?.id ?? ""
-        );
+      const sortedAnchors = sortGames(formatted.anchors);
+      setAnchorAId((current) =>
+        current && sortedAnchors.some((game) => game.id === current)
+          ? current
+          : ""
+      );
+      setAnchorBId((current) =>
+        current && sortedAnchors.some((game) => game.id === current)
+          ? current
+          : ""
+      );
+
+      const sortedExtras = sortGames(formatted.hedges);
+      setExtraGameId((current) =>
+        current && sortedExtras.some((game) => game.id === current)
+          ? current
+          : sortedExtras[0]?.id ?? ""
+      );
+    };
+
+    const loadFallback = fetch("/betgames.json")
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to load betgames.json");
+        }
+        return res.json() as Promise<RawGame[]>;
       })
-      .catch((err) => console.error("Failed to load betgames.json", err));
+      .then((data) => {
+        if (!cancelled && !liveApplied) {
+          applyGames(data);
+          setGamesSource((current) => (current === "live" ? current : "fallback"));
+        }
+      })
+      .catch((err) => console.error("Failed to load fallback matches", err));
+
+    const loadLive = fetch("/api/games")
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to load live matches");
+        }
+        return res.json() as Promise<{ games: RawGame[]; source: "live" | "fallback" }>;
+      })
+      .then((payload) => {
+        if (!cancelled && Array.isArray(payload.games) && payload.games.length > 0) {
+          if (payload.source === "live") {
+            liveApplied = true;
+          }
+          applyGames(payload.games);
+          setGamesSource(payload.source);
+        }
+      })
+      .catch((err) => console.error("Failed to load live matches", err));
+
+    Promise.allSettled([loadFallback, loadLive]).then(() => {
+      if (!cancelled) {
+        setGamesSource((current) => (current === "loading" ? "fallback" : current));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const sortedAnchors = useMemo(() => sortGames(games.anchors), [games.anchors]);
@@ -281,6 +326,13 @@ export default function Home() {
           <h1 className="text-2xl font-bold">Betting Strategy Analyzer</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Two anchors create the 9 opening odds in a unified builder
+          </p>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            {gamesSource === "live"
+              ? "Live SportPesa matches loaded"
+              : gamesSource === "loading"
+                ? "Loading live SportPesa matches…"
+                : "Using saved sample matches"}
           </p>
         </div>
       </header>
