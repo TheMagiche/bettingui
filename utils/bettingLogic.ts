@@ -39,6 +39,15 @@ export type AnchorPair = {
   b: FormattedGame;
 };
 
+export type IndividualBet = {
+  id: string;
+  game: FormattedGame;
+  market: MarketKey;
+  amount: number;
+  odds: number;
+  returnValue: number;
+};
+
 export function formatAndIdentifyGames(rawJsonData: RawGame[]) {
   const formattedGames = rawJsonData.map((game) => {
     const hw = parseFloat(String(game.home_win));
@@ -284,9 +293,36 @@ export function cartesianMarkets(count: number): MarketKey[][] {
 
 export const FAILSAFE_MARKETS = ["d", "l"] as const;
 export const FAILSAFE_DEFAULT_STAKE = 10;
+export const INDIVIDUAL_DEFAULT_STAKE = 10;
 
 export function failsafeMarketsFor(market: MarketKey) {
   return FAILSAFE_MARKETS.filter((key) => key !== market);
+}
+
+export function createIndividualBet(
+  game: FormattedGame,
+  market: MarketKey,
+  amount = INDIVIDUAL_DEFAULT_STAKE,
+  id?: string
+): IndividualBet {
+  const stake = Math.max(amount, 0);
+  const odds = game[market];
+  return {
+    id: id ?? `individual-${game.id}-${market}`,
+    game,
+    market,
+    amount: stake,
+    odds,
+    returnValue: stake * odds,
+  };
+}
+
+export function individualBetStake(bets: Pick<IndividualBet, "amount">[]) {
+  return bets.reduce((sum, bet) => sum + Math.max(bet.amount, 0), 0);
+}
+
+export function individualBetReturn(bets: Pick<IndividualBet, "returnValue">[]) {
+  return bets.reduce((sum, bet) => sum + bet.returnValue, 0);
 }
 
 function payoutRange(values: number[]) {
