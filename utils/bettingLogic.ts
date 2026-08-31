@@ -74,6 +74,19 @@ export function identifyGames(games: FormattedGame[]) {
 
 export const MARKET_KEYS: MarketKey[] = ["w", "d", "l"];
 
+/** A 9x opening ticket returns the original spread when each cell is staked at spread / 9. */
+export const COVER_MULTIPLIER = 9;
+
+export function needsCoverBoost(odds: number) {
+  return odds < COVER_MULTIPLIER;
+}
+
+export const FAILSAFE_MARKETS = ["d", "l"] as const;
+
+export function failsafeMarketsFor(market: MarketKey) {
+  return FAILSAFE_MARKETS.filter((key) => key !== market);
+}
+
 export function createNineAnchorOdds(
   anchorA: FormattedGame,
   anchorB: FormattedGame

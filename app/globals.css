@@ -49,6 +49,10 @@
     @apply rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-center transition hover:border-blue-300 dark:border-zinc-800 dark:bg-zinc-950;
   }
 
+  .matrix-cell-boosted {
+    @apply border-blue-300 bg-blue-50/70 dark:border-blue-800 dark:bg-blue-950/20;
+  }
+
   .betslip-item {
     @apply border-b border-zinc-200 last:border-0 dark:border-zinc-800;
   }

@@ -2,10 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  COVER_MULTIPLIER,
   createNineAnchorOdds,
+  failsafeMarketsFor,
   formatAndIdentifyGames,
   gameTitle,
   MARKET_KEYS,
+  needsCoverBoost,
 } from "@/utils/bettingLogic";
 import type { FormattedGame, MarketKey } from "@/utils/bettingLogic";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
@@ -23,6 +26,21 @@ type ExtraLeg = {
   category: ExtraCategory;
   game: FormattedGame;
   market: MarketKey;
+  failsafe: {
+    d: number;
+    l: number;
+  };
+};
+
+type FailsafeTicket = {
+  id: string;
+  legId: string;
+  category: ExtraCategory;
+  game: FormattedGame;
+  market: "d" | "l";
+  amount: number;
+  odds: number;
+  returnValue: number;
 };
 
 const MARKET_TITLES: Record<MarketKey, string> = {
@@ -52,7 +70,7 @@ export default function Home() {
     hedges: [],
     unicorns: [],
   });
-  const [spread, setSpread] = useState<number>(100);
+  const [spread, setSpread] = useState<number>(90);
   const [anchorAId, setAnchorAId] = useState("");
   const [anchorBId, setAnchorBId] = useState("");
   const [cellAmounts, setCellAmounts] = useState<Record<string, number>>({});
@@ -125,27 +143,56 @@ export default function Home() {
   );
 
   const tickets = useMemo(() => {
-    const equalStake = spread / 9;
+    const equalStake = spread / COVER_MULTIPLIER;
     return combinations.map((combo) => {
-      const amount = cellAmounts[combo.id] ?? equalStake;
-      const odds = combo.odds * extraMultiplier;
+      const amount = Math.max(cellAmounts[combo.id] ?? equalStake, 0);
+      const boosted = extraLegs.length > 0 && needsCoverBoost(combo.odds);
+      const odds = boosted ? combo.odds * extraMultiplier : combo.odds;
       return {
         ...combo,
-        amount: Math.max(amount, 0),
+        amount,
+        boosted,
+        baseOdds: combo.odds,
         odds,
-        returnValue: Math.max(amount, 0) * odds,
+        returnValue: amount * odds,
       };
     });
-  }, [cellAmounts, combinations, extraMultiplier, spread]);
+  }, [cellAmounts, combinations, extraLegs.length, extraMultiplier, spread]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [anchorAId, anchorBId]);
+  const failsafeTickets = useMemo<FailsafeTicket[]>(
+    () =>
+      extraLegs.flatMap((leg) =>
+        failsafeMarketsFor(leg.market).map((market) => {
+          const amount = Math.max(leg.failsafe[market], 0);
+          const odds = leg.game[market];
+          return {
+            id: `${leg.id}-${market}`,
+            legId: leg.id,
+            category: leg.category,
+            game: leg.game,
+            market,
+            amount,
+            odds,
+            returnValue: amount * odds,
+          };
+        })
+      ),
+    [extraLegs]
+  );
 
-  const totalStake = useMemo(
+  const failsafeStake = useMemo(
+    () => failsafeTickets.reduce((sum, ticket) => sum + ticket.amount, 0),
+    [failsafeTickets]
+  );
+
+  const openingStake = useMemo(
     () => tickets.reduce((sum, ticket) => sum + ticket.amount, 0),
     [tickets]
   );
+
+  const totalStake = openingStake + failsafeStake;
+
+  const workingSpread = spread + failsafeStake;
 
   const lowestReturn = useMemo(
     () => (tickets.length ? Math.min(...tickets.map((ticket) => ticket.returnValue)) : 0),
@@ -186,6 +233,7 @@ export default function Home() {
         category: extraCategory,
         game: selectedExtraGame,
         market: "w",
+        failsafe: { d: 0, l: 0 },
       },
     ]);
   };
@@ -198,6 +246,18 @@ export default function Home() {
 
   const removeExtraLeg = (id: string) => {
     setExtraLegs((prev) => prev.filter((leg) => leg.id !== id));
+  };
+
+  const updateFailsafeAmount = (id: string, market: "d" | "l", value: string) => {
+    const parsedValue = Number(value);
+    const nextAmount = Number.isFinite(parsedValue) ? Math.max(parsedValue, 0) : 0;
+    setExtraLegs((prev) =>
+      prev.map((leg) =>
+        leg.id === id
+          ? { ...leg, failsafe: { ...leg.failsafe, [market]: nextAmount } }
+          : leg
+      )
+    );
   };
 
   const clearBuilder = () => {
@@ -244,12 +304,23 @@ export default function Home() {
                   className="w-32 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
                 />
                 <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                  Default stake per cell: ${(spread / 9).toFixed(2)}
+                  Default stake per cell: ${(spread / COVER_MULTIPLIER).toFixed(2)}
+                  {failsafeStake > 0
+                    ? ` · failsafe adds $${failsafeStake.toFixed(2)} to the spread`
+                    : ""}
                 </span>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
+                <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                  Opening spread
+                </div>
+                <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                  ${spread.toFixed(2)}
+                </div>
+              </div>
               <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
                 <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
                   Total stake
@@ -306,6 +377,7 @@ export default function Home() {
                   onChange={(e) => {
                     setAnchorAId(e.target.value);
                     setCellAmounts({});
+                    setCurrentPage(1);
                   }}
                   className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
                 >
@@ -327,6 +399,7 @@ export default function Home() {
                   onChange={(e) => {
                     setAnchorBId(e.target.value);
                     setCellAmounts({});
+                    setCurrentPage(1);
                   }}
                   className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
                 >
@@ -351,7 +424,7 @@ export default function Home() {
                   </div>
                   {extraLegs.length > 0 && (
                     <div className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                      Extra legs ×{extraMultiplier.toFixed(2)}
+                      Extra legs ×{extraMultiplier.toFixed(2)} on tickets below {COVER_MULTIPLIER}×
                     </div>
                   )}
                 </div>
@@ -390,16 +463,30 @@ export default function Home() {
                           }
 
                           return (
-                            <div key={ticket.id} className="matrix-cell">
-                              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                                {row.toUpperCase()} × {col.toUpperCase()}
+                            <div
+                              key={ticket.id}
+                              className={`matrix-cell ${ticket.boosted ? "matrix-cell-boosted" : ""}`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+                                  {row.toUpperCase()} × {col.toUpperCase()}
+                                </div>
+                                {ticket.boosted ? (
+                                  <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                                    Boosted
+                                  </span>
+                                ) : ticket.baseOdds >= COVER_MULTIPLIER ? (
+                                  <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                    {COVER_MULTIPLIER}× cover
+                                  </span>
+                                ) : null}
                               </div>
                               <div className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
                                 {ticket.odds.toFixed(2)}
                               </div>
                               <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                                 {anchorA[row].toFixed(2)} × {anchorB[col].toFixed(2)}
-                                {extraLegs.length > 0 ? ` × ${extraMultiplier.toFixed(2)}` : ""}
+                                {ticket.boosted ? ` × ${extraMultiplier.toFixed(2)}` : ""}
                               </div>
                               <label className="mt-3 block">
                                 <span className="mb-1 block text-[10px] uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
@@ -439,7 +526,8 @@ export default function Home() {
             <div className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800">
               <h3 className="text-lg font-bold">Add a hedge or unicorn</h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Extra legs multiply every opening ticket in this builder.
+                Extra legs apply only when an opening ticket is below {COVER_MULTIPLIER}×,
+                so its return would be less than the original spread.
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -546,7 +634,7 @@ export default function Home() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold">Betslip</h2>
               <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                {tickets.length}
+                {tickets.length + failsafeTickets.length}
               </span>
             </div>
 
@@ -558,6 +646,11 @@ export default function Home() {
                   </div>
                   <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                     Odds {ticket.odds.toFixed(2)} · Stake ${ticket.amount.toFixed(2)}
+                    {ticket.boosted
+                      ? " · boosted"
+                      : ticket.baseOdds >= COVER_MULTIPLIER
+                        ? ` · ${COVER_MULTIPLIER}× cover`
+                        : ""}
                   </div>
                   <div className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                     Return ${ticket.returnValue.toFixed(2)}
@@ -593,10 +686,39 @@ export default function Home() {
               </div>
             )}
 
+            {failsafeTickets.length > 0 && (
+              <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                  Failsafe
+                </div>
+                {failsafeTickets.map((ticket) => (
+                  <div key={ticket.id} className="betslip-item py-3">
+                    <div className="font-medium text-sm">
+                      {gameTitle(ticket.game)} · {MARKET_TITLES[ticket.market]}
+                    </div>
+                    <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      Odds {ticket.odds.toFixed(2)} · Stake ${ticket.amount.toFixed(2)}
+                    </div>
+                    <div className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      Return ${ticket.returnValue.toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="mt-5 border-t border-zinc-200 pt-4 dark:border-zinc-800">
               <div className="mb-1 flex justify-between text-sm">
-                <span>Tickets</span>
+                <span>Opening tickets</span>
                 <span>{tickets.length}</span>
+              </div>
+              <div className="mb-1 flex justify-between text-sm">
+                <span>Opening stake</span>
+                <span>${openingStake.toFixed(2)}</span>
+              </div>
+              <div className="mb-1 flex justify-between text-sm">
+                <span>Failsafe added</span>
+                <span>${failsafeStake.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold">
                 <span>Total stake</span>
@@ -605,6 +727,94 @@ export default function Home() {
             </div>
           </aside>
         </div>
+
+        {extraLegs.length > 0 && (
+          <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                  Failsafe
+                </div>
+                <h2 className="mt-1 text-2xl font-bold">Draw and loss cover</h2>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  If a hedge or unicorn misses, these standalone draw and loss bets
+                  protect the opening tickets. Their stakes are added to the initial spread.
+                </p>
+              </div>
+              <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
+                <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                  Spread + failsafe
+                </div>
+                <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                  ${workingSpread.toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {extraLegs.map((leg) => {
+                const markets = failsafeMarketsFor(leg.market);
+                return (
+                  <div key={`${leg.id}-failsafe`} className="bet-builder-card">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                      {EXTRA_TITLES[leg.category].slice(0, -1)} failsafe
+                    </div>
+                    <h3 className="mt-1 text-base font-bold text-zinc-900 dark:text-zinc-50">
+                      {gameTitle(leg.game)}
+                    </h3>
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      Extra leg uses {MARKET_TITLES[leg.market]}. Cover the remaining
+                      outcomes below.
+                    </p>
+
+                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {markets.map((market) => {
+                        const amount = leg.failsafe[market];
+                        const odds = leg.game[market];
+                        return (
+                          <div
+                            key={`${leg.id}-${market}`}
+                            className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+                                {MARKET_TITLES[market]}
+                              </span>
+                              <span className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                                {odds.toFixed(2)}
+                              </span>
+                            </div>
+                            <label className="mt-3 block">
+                              <span className="mb-1 block text-[10px] uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+                                Amount added to spread
+                              </span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={amount}
+                                onChange={(event) =>
+                                  updateFailsafeAmount(leg.id, market, event.target.value)
+                                }
+                                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+                              />
+                            </label>
+                            <div className="mt-2 flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
+                              <span>Return</span>
+                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                ${(amount * odds).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );
