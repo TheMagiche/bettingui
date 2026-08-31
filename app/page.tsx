@@ -84,15 +84,13 @@ function SlipLeg({
   market: MarketKey;
 }) {
   return (
-    <div className="rounded-lg bg-zinc-100 px-2.5 py-2 dark:bg-zinc-800">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-        {label}
+    <div>
+      <div className="text-sm font-semibold leading-tight text-zinc-900 dark:text-zinc-50">
+        {gameTitle(game)}{" "}
+        <span className="font-medium text-zinc-500 dark:text-zinc-400">({label})</span>
       </div>
-      <div className="mt-0.5 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-        {gameTitle(game)}
-      </div>
-      <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-        {MARKET_TITLES[market]} @ {game[market].toFixed(2)}
+      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+        {MARKET_TITLES[market]} {game[market].toFixed(2)}
       </div>
     </div>
   );
@@ -832,13 +830,10 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {paginatedTickets.map((ticket) => (
-                <div key={ticket.id} className="betslip-item py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-medium text-sm">
-                      {ticket.row.toUpperCase()} × {ticket.col.toUpperCase()}
-                    </div>
+                <div key={ticket.id} className="betslip-card">
+                  <div className="mb-2 flex items-center justify-end">
                     <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
                       {ticket.boosted
                         ? "Boosted"
@@ -849,9 +844,9 @@ export default function Home() {
                   </div>
 
                   {anchorA && anchorB && (
-                    <div className="mt-2 space-y-1.5">
-                      <SlipLeg label="Anchor 1" game={anchorA} market={ticket.row} />
-                      <SlipLeg label="Anchor 2" game={anchorB} market={ticket.col} />
+                    <div className="space-y-1.5">
+                      <SlipLeg label="Anchor" game={anchorA} market={ticket.row} />
+                      <SlipLeg label="Anchor" game={anchorB} market={ticket.col} />
                       {ticket.boosted &&
                         extraLegs.map((leg) => (
                           <SlipLeg
@@ -901,12 +896,12 @@ export default function Home() {
             )}
 
             {failsafeTickets.length > 0 && (
-              <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+              <div className="mt-4 space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
                 <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                   Failsafe
                 </div>
                 {failsafeTickets.map((ticket) => (
-                  <div key={ticket.id} className="betslip-item py-3">
+                  <div key={ticket.id} className="betslip-card">
                     <SlipLeg
                       label={`${EXTRA_TITLES[ticket.category].slice(0, -1)} failsafe`}
                       game={ticket.game}
