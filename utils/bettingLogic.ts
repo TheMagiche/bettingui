@@ -373,6 +373,7 @@ export function failsafePayoutGroup(
   const unboosted = { low: 0, high: 0 };
   const missOpening = { low: 0, high: 0 };
   let hasBoosted = false;
+  let hasUnboosted = false;
 
   for (const pair of groupTicketsByPair(tickets)) {
     const boostedReturns = pair
@@ -384,6 +385,9 @@ export function failsafePayoutGroup(
 
     if (boostedReturns.length > 0) {
       hasBoosted = true;
+    }
+    if (unboostedReturns.length > 0) {
+      hasUnboosted = true;
     }
 
     addRange(boosted, boostedReturns);
@@ -412,7 +416,13 @@ export function failsafePayoutGroup(
   const draws = leveragedEarnings(drawReturns, missOpenings, hasBoosted);
   const losses = leveragedEarnings(lossReturns, missOpenings, hasBoosted);
   const comboValues = [...draws.values, ...losses.values];
-  const combo = comboValues.length > 0 ? payoutRange(comboValues) : unboosted;
+  if (comboValues.length === 0 && hasUnboosted) {
+    comboValues.push(unboosted.low, unboosted.high);
+  }
+  if (hasBoosted) {
+    comboValues.push(boosted.low, boosted.high);
+  }
+  const combo = payoutRange(comboValues);
 
   return {
     boostedLow: boosted.low,

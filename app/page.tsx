@@ -1269,7 +1269,7 @@ export default function Home() {
                 />
                 <PayoutScenario
                   title="Combo wins"
-                  detail="Failsafe floor, up to unboosted plus draw or loss"
+                  detail="Failsafe floor, up to boosted wins"
                   low={payoutGroup.comboLow}
                   high={payoutGroup.comboHigh}
                 />
