@@ -18,7 +18,44 @@ const endpoints = [
   const events = [];
   const seen = new Set();
 
+  const addEvents = (batch, boosted) => {
+    for (const event of batch || []) {
+      const key = String(event.id || JSON.stringify(event.competitors));
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      if (boosted) {
+        event.boosted = true;
+      }
+      events.push(event);
+    }
+  };
+
   try {
+    const popularResponse = await fetch("https://www.ke.sportpesa.com/api/populars/1/games", {
+      headers: { Accept: "application/json" }
+    });
+    if (popularResponse.status === 200 || popularResponse.status === 206) {
+      const popular = await popularResponse.json();
+      if (Array.isArray(popular) && popular.length > 0) {
+        const missing = popular.filter((event) => !event.markets || event.markets.length === 0);
+        if (missing.length > 0) {
+          const ids = missing.map((event) => event.id).filter(Boolean).join(",");
+          const marketsResponse = await fetch("https://www.ke.sportpesa.com/api/games/markets?games=" + ids + "&markets=10", {
+            headers: { Accept: "application/json" }
+          });
+          if (marketsResponse.status === 200 || marketsResponse.status === 206) {
+            const markets = await marketsResponse.json();
+            for (const event of missing) {
+              event.markets = markets[String(event.id)] || markets[event.id] || [];
+            }
+          }
+        }
+        addEvents(popular, true);
+      }
+    }
+
     for (const base of endpoints) {
       for (let page = 0; page < 8; page += 1) {
         const response = await fetch(base + (page * pageSize + 1), {
@@ -31,13 +68,7 @@ const endpoints = [
         if (!Array.isArray(data) || data.length === 0) {
           break;
         }
-        for (const event of data) {
-          const key = String(event.id || JSON.stringify(event.competitors));
-          if (!seen.has(key)) {
-            seen.add(key);
-            events.push(event);
-          }
-        }
+        addEvents(data, false);
         if (data.length < pageSize) {
           break;
         }
@@ -73,13 +104,16 @@ def map_event(event):
         return None
 
     try:
-        return {
+        game = {
             "home_team": home["name"].strip(),
             "away_team": away["name"].strip(),
             "home_win": float(selections[0]["odds"]),
             "draw": float(selections[1]["odds"]),
             "away_win": float(selections[2]["odds"]),
         }
+        if event.get("boosted"):
+            game["boosted"] = True
+        return game
     except (KeyError, TypeError, ValueError):
         return None
 

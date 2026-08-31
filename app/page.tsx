@@ -66,6 +66,12 @@ const emptyIdentifiedGames: IdentifiedGames = {
   others: [],
 };
 
+function oddsDetail(game: FormattedGame) {
+  return `W ${game.w.toFixed(2)} · D ${game.d.toFixed(2)} · L ${game.l.toFixed(2)}${
+    game.originalData.boosted ? " · boosted" : ""
+  }`;
+}
+
 function sortGames(games: FormattedGame[]) {
   return [...games].sort((a, b) =>
     `${a.originalData.home_team} ${a.originalData.away_team}`
@@ -477,7 +483,7 @@ export default function Home() {
                   label={anchorA ? gameTitle(anchorA) : "Search and choose first anchor"}
                   detail={
                     anchorA
-                      ? `W ${anchorA.w.toFixed(2)} · D ${anchorA.d.toFixed(2)} · L ${anchorA.l.toFixed(2)}`
+                      ? oddsDetail(anchorA)
                       : `${sortedAnchors.length} anchors available`
                   }
                   onClick={() => setPicker("anchorA")}
@@ -491,7 +497,7 @@ export default function Home() {
                   label={anchorB ? gameTitle(anchorB) : "Search and choose second anchor"}
                   detail={
                     anchorB
-                      ? `W ${anchorB.w.toFixed(2)} · D ${anchorB.d.toFixed(2)} · L ${anchorB.l.toFixed(2)}`
+                      ? oddsDetail(anchorB)
                       : `${sortedAnchors.length} anchors available`
                   }
                   onClick={() => setPicker("anchorB")}
@@ -653,7 +659,7 @@ export default function Home() {
                       extraCategory === "others"
                         ? `${games.others.length} matches not auto-classified`
                         : selectedExtraGame
-                          ? `W ${selectedExtraGame.w.toFixed(2)} · D ${selectedExtraGame.d.toFixed(2)} · L ${selectedExtraGame.l.toFixed(2)}`
+                          ? oddsDetail(selectedExtraGame)
                           : extraGames.length
                             ? `${extraGames.length} available`
                             : "No picks available"

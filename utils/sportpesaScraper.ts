@@ -33,6 +33,7 @@ type SportpesaMarket = {
 
 type SportpesaEvent = {
   id?: number | string;
+  boosted?: boolean;
   competitors?: SportpesaCompetitor[];
   markets?: SportpesaMarket[];
 };
@@ -128,6 +129,7 @@ function mapEvent(event: SportpesaEvent): RawGame | null {
     home_win: homeWin,
     draw,
     away_win: awayWin,
+    boosted: Boolean(event.boosted),
   };
 }
 
@@ -159,6 +161,53 @@ const FETCH_GAMES_SCRIPT = `
   const events = [];
   const seen = new Set();
 
+  const addEvents = (batch, boosted) => {
+    for (const event of batch || []) {
+      const key = String(event.id ?? JSON.stringify(event.competitors));
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      if (boosted) {
+        event.boosted = true;
+      }
+      events.push(event);
+    }
+  };
+
+  const attachMarkets = async (batch) => {
+    const missing = (batch || []).filter((event) => !event.markets || event.markets.length === 0);
+    if (missing.length === 0) {
+      return;
+    }
+    const ids = missing.map((event) => event.id).filter(Boolean).join(",");
+    const response = await fetch("https://www.ke.sportpesa.com/api/games/markets?games=" + ids + "&markets=10", {
+      headers: { Accept: "application/json" },
+    });
+    if (response.status !== 200 && response.status !== 206) {
+      return;
+    }
+    const markets = await response.json();
+    for (const event of missing) {
+      event.markets = markets[String(event.id)] || markets[event.id] || [];
+    }
+  };
+
+  try {
+    const popularResponse = await fetch("https://www.ke.sportpesa.com/api/populars/1/games", {
+      headers: { Accept: "application/json" },
+    });
+    if (popularResponse.status === 200 || popularResponse.status === 206) {
+      const popular = await popularResponse.json();
+      if (Array.isArray(popular) && popular.length > 0) {
+        await attachMarkets(popular);
+        addEvents(popular, true);
+      }
+    }
+  } catch (error) {
+    // Popular/boosted feed is optional; upcoming and today still load.
+  }
+
   for (const base of endpoints) {
     for (let page = 0; page < 8; page += 1) {
       try {
@@ -172,13 +221,7 @@ const FETCH_GAMES_SCRIPT = `
         if (!Array.isArray(data) || data.length === 0) {
           break;
         }
-        for (const event of data) {
-          const key = String(event.id ?? JSON.stringify(event.competitors));
-          if (!seen.has(key)) {
-            seen.add(key);
-            events.push(event);
-          }
-        }
+        addEvents(data, false);
         if (data.length < pageSize) {
           break;
         }

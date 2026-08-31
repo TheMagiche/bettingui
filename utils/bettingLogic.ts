@@ -4,6 +4,7 @@ export type RawGame = {
   home_win: string | number;
   draw: string | number;
   away_win: string | number;
+  boosted?: boolean;
 };
 
 export type FormattedGame = {
@@ -118,7 +119,11 @@ export function matchesTeamSearch(game: FormattedGame, query: string) {
     return true;
   }
 
-  const { home_team, away_team } = game.originalData;
+  const { home_team, away_team, boosted } = game.originalData;
+  if (needle === "boosted" || needle === "boost") {
+    return Boolean(boosted);
+  }
+
   return (
     home_team.toLowerCase().includes(needle) ||
     away_team.toLowerCase().includes(needle) ||

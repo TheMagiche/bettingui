@@ -191,9 +191,16 @@ export default function GameSelectModal({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">
-                          {gameTitle(game)}
-                        </h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">
+                            {gameTitle(game)}
+                          </h3>
+                          {game.originalData.boosted ? (
+                            <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                              Boosted odds
+                            </span>
+                          ) : null}
+                        </div>
                         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                           {game.originalData.home_team} (home) ·{" "}
                           {game.originalData.away_team} (away)
