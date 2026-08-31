@@ -29,9 +29,14 @@ export type IdentifiedGames = {
 
 export type AnchorCombo = {
   id: string;
-  row: MarketKey;
-  col: MarketKey;
+  pairIndex: number;
+  markets: MarketKey[];
   odds: number;
+};
+
+export type AnchorPair = {
+  a: FormattedGame;
+  b: FormattedGame;
 };
 
 export function formatAndIdentifyGames(rawJsonData: RawGame[]) {
@@ -249,11 +254,32 @@ export function filterGamesByDate(games: FormattedGame[], dateKey: string) {
 
 export const MARKET_KEYS: MarketKey[] = ["w", "d", "l"];
 
+export const BASE_ANCHOR_COUNT = 2;
+
 /** A 9x opening ticket returns the original spread when each cell is staked at spread / 9. */
 export const COVER_MULTIPLIER = 9;
 
-export function needsCoverBoost(odds: number) {
-  return odds < COVER_MULTIPLIER;
+export function coverMultiplierFor(_anchorCount = BASE_ANCHOR_COUNT) {
+  return COVER_MULTIPLIER;
+}
+
+/** Each independent 2-anchor pair doubles the opening book and failsafe default. */
+export function coverScaleFor(pairCount: number) {
+  return Math.max(pairCount, 1);
+}
+
+export function needsCoverBoost(odds: number, coverMultiplier = COVER_MULTIPLIER) {
+  return odds < coverMultiplier;
+}
+
+export function cartesianMarkets(count: number): MarketKey[][] {
+  if (count <= 0) {
+    return [[]];
+  }
+
+  return cartesianMarkets(count - 1).flatMap((prefix) =>
+    MARKET_KEYS.map((key) => [...prefix, key])
+  );
 }
 
 export const FAILSAFE_MARKETS = ["d", "l"] as const;
@@ -301,16 +327,79 @@ function leveragedEarnings(
   return { ...payoutRange(values), values };
 }
 
+function groupTicketsByPair<T extends { pairIndex: number }>(tickets: T[]) {
+  const groups = new Map<number, T[]>();
+  for (const ticket of tickets) {
+    const list = groups.get(ticket.pairIndex) ?? [];
+    list.push(ticket);
+    groups.set(ticket.pairIndex, list);
+  }
+  return [...groups.values()];
+}
+
+function addRange(
+  total: { low: number; high: number },
+  values: number[],
+  empty = { low: 0, high: 0 }
+) {
+  if (values.length === 0) {
+    total.low += empty.low;
+    total.high += empty.high;
+    return;
+  }
+
+  total.low += Math.min(...values);
+  total.high += Math.max(...values);
+}
+
+export function openingReturnRange(
+  tickets: { pairIndex: number; returnValue: number }[]
+) {
+  const total = { low: 0, high: 0 };
+  for (const pair of groupTicketsByPair(tickets)) {
+    addRange(
+      total,
+      pair.map((ticket) => ticket.returnValue)
+    );
+  }
+  return total;
+}
+
 export function failsafePayoutGroup(
-  tickets: { boosted: boolean; returnValue: number }[],
+  tickets: { pairIndex: number; boosted: boolean; returnValue: number }[],
   failsafeTickets: { market: "d" | "l"; amount: number; returnValue: number }[]
 ) {
-  const boostedReturns = tickets
-    .filter((ticket) => ticket.boosted)
-    .map((ticket) => ticket.returnValue);
-  const unboostedReturns = tickets
-    .filter((ticket) => !ticket.boosted)
-    .map((ticket) => ticket.returnValue);
+  const boosted = { low: 0, high: 0 };
+  const unboosted = { low: 0, high: 0 };
+  const missOpening = { low: 0, high: 0 };
+  let hasBoosted = false;
+  let hasUnboosted = false;
+
+  for (const pair of groupTicketsByPair(tickets)) {
+    const boostedReturns = pair
+      .filter((ticket) => ticket.boosted)
+      .map((ticket) => ticket.returnValue);
+    const unboostedReturns = pair
+      .filter((ticket) => !ticket.boosted)
+      .map((ticket) => ticket.returnValue);
+
+    if (boostedReturns.length > 0) {
+      hasBoosted = true;
+    }
+    if (unboostedReturns.length > 0) {
+      hasUnboosted = true;
+    }
+
+    addRange(boosted, boostedReturns);
+    addRange(unboosted, unboostedReturns);
+
+    const missParts = [
+      ...(boostedReturns.length > 0 ? [0] : []),
+      ...unboostedReturns,
+    ];
+    addRange(missOpening, missParts);
+  }
+
   const fundedFailsafes = failsafeTickets.filter((ticket) => ticket.amount > 0);
   const drawReturns = fundedFailsafes
     .filter((ticket) => ticket.market === "d")
@@ -319,22 +408,31 @@ export function failsafePayoutGroup(
     .filter((ticket) => ticket.market === "l")
     .map((ticket) => ticket.returnValue);
 
-  const hasBoosted = boostedReturns.length > 0;
-  const boosted = payoutRange(boostedReturns);
-  const unboosted = payoutRange(unboostedReturns);
-  const draws = leveragedEarnings(drawReturns, unboostedReturns, hasBoosted);
-  const losses = leveragedEarnings(lossReturns, unboostedReturns, hasBoosted);
-  const combo = payoutRange([...draws.values, ...losses.values]);
+  const missOpenings = [missOpening.low, missOpening.high].filter(
+    (value, index, values) => values.indexOf(value) === index
+  );
+  const drawFailsafe = payoutRange(drawReturns);
+  const lossFailsafe = payoutRange(lossReturns);
+  const draws = leveragedEarnings(drawReturns, missOpenings, hasBoosted);
+  const losses = leveragedEarnings(lossReturns, missOpenings, hasBoosted);
+  const comboValues = [...draws.values, ...losses.values];
+  if (comboValues.length === 0 && hasUnboosted) {
+    comboValues.push(unboosted.low, unboosted.high);
+  }
+  if (hasBoosted) {
+    comboValues.push(boosted.low, boosted.high);
+  }
+  const combo = payoutRange(comboValues);
 
   return {
     boostedLow: boosted.low,
     boostedHigh: boosted.high,
     unboostedLow: unboosted.low,
     unboostedHigh: unboosted.high,
-    drawLow: draws.low,
-    drawHigh: draws.high,
-    lossLow: losses.low,
-    lossHigh: losses.high,
+    drawLow: drawFailsafe.low,
+    drawHigh: drawFailsafe.high,
+    lossLow: lossFailsafe.low,
+    lossHigh: lossFailsafe.high,
     comboLow: combo.low,
     comboHigh: combo.high,
   };
@@ -342,15 +440,20 @@ export function failsafePayoutGroup(
 
 export function createNineAnchorOdds(
   anchorA: FormattedGame,
-  anchorB: FormattedGame
+  anchorB: FormattedGame,
+  pairIndex = 0
 ): AnchorCombo[] {
-  return MARKET_KEYS.flatMap((row) =>
-    MARKET_KEYS.map((col) => ({
-      id: `${row}-${col}`,
-      row,
-      col,
-      odds: anchorA[row] * anchorB[col],
-    }))
+  return cartesianMarkets(BASE_ANCHOR_COUNT).map((markets) => ({
+    id: `${pairIndex}-${markets.join("-")}`,
+    pairIndex,
+    markets,
+    odds: anchorA[markets[0]] * anchorB[markets[1]],
+  }));
+}
+
+export function createPairedAnchorOdds(pairs: AnchorPair[]): AnchorCombo[] {
+  return pairs.flatMap((pair, pairIndex) =>
+    createNineAnchorOdds(pair.a, pair.b, pairIndex)
   );
 }
 
