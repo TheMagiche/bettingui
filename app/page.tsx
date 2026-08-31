@@ -53,7 +53,18 @@ type PickerTarget =
   | "anchorB"
   | "extraAnchor"
   | ExtraCategory
-  | "individual";
+  | "individual"
+  | "cellExtra";
+
+type ExtraLegTarget = {
+  aId: string;
+  bId: string;
+  markets: MarketKey[];
+};
+
+type CellExtraPicker = ExtraLegTarget & {
+  category: Exclude<ExtraCategory, "others">;
+};
 
 type ExtraPairIds = {
   aId: string;
@@ -65,14 +76,6 @@ type ExtraPairPicker = {
   slot: ExtraPairSlot;
 };
 
-type OpeningTicket = AnchorCombo & {
-  amount: number;
-  boosted: boolean;
-  baseOdds: number;
-  odds: number;
-  returnValue: number;
-};
-
 type ExtraLeg = {
   id: string;
   category: Exclude<ExtraCategory, "others">;
@@ -82,6 +85,17 @@ type ExtraLeg = {
     d: number;
     l: number;
   };
+  target?: ExtraLegTarget;
+};
+
+type OpeningTicket = AnchorCombo & {
+  amount: number;
+  boosted: boolean;
+  baseOdds: number;
+  odds: number;
+  returnValue: number;
+  extraMultiplier: number;
+  extraLegs: ExtraLeg[];
 };
 
 type FailsafeTicket = {
@@ -215,6 +229,58 @@ function pairIds(pair: ExtraPairIds) {
   return [pair.aId, pair.bId].filter(Boolean);
 }
 
+function extraLegsProduct(legs: ExtraLeg[]) {
+  return legs.reduce((product, leg) => product * leg.game[leg.market], 1);
+}
+
+function ticketMatchesTarget(
+  ticket: Pick<AnchorCombo, "markets">,
+  pair: AnchorPair,
+  target: ExtraLegTarget,
+) {
+  return extraTargetEquals(target, {
+    aId: pair.a.id,
+    bId: pair.b.id,
+    markets: ticket.markets,
+  });
+}
+
+function extraTargetEquals(a: ExtraLegTarget, b: ExtraLegTarget) {
+  return (
+    a.aId === b.aId &&
+    a.bId === b.bId &&
+    a.markets[0] === b.markets[0] &&
+    a.markets[1] === b.markets[1]
+  );
+}
+
+function extraLegTargetLabel(target: ExtraLegTarget, pairs: AnchorPair[]) {
+  const pairIndex = pairs.findIndex(
+    (pair) => pair.a.id === target.aId && pair.b.id === target.bId,
+  );
+  const pair = pairIndex >= 0 ? pairs[pairIndex] : null;
+  const markets = target.markets.map((market) => market.toUpperCase()).join(" × ");
+  if (!pair) {
+    return markets;
+  }
+
+  const pairPrefix = pairs.length > 1 ? `Pair ${pairIndex + 1} · ` : "";
+  return `${pairPrefix}${markets} · ${gameTitle(pair.a)} × ${gameTitle(pair.b)}`;
+}
+
+function CellExtraMarker({ label }: { label: string }) {
+  return (
+    <div className="mt-2">
+      <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+        Cell
+      </span>
+      <p className="mt-1 text-xs leading-snug text-zinc-500 dark:text-zinc-400">
+        {label}
+      </p>
+    </div>
+  );
+}
+
 function scaleFailsafe(legs: ExtraLeg[], factor: number): ExtraLeg[] {
   if (factor === 1) {
     return legs;
@@ -239,6 +305,8 @@ export default function Home() {
   const [extraPairs, setExtraPairs] = useState<ExtraPairIds[]>([]);
   const [extraPairPicker, setExtraPairPicker] =
     useState<ExtraPairPicker | null>(null);
+  const [cellExtraPicker, setCellExtraPicker] =
+    useState<CellExtraPicker | null>(null);
   const [cellAmounts, setCellAmounts] = useState<Record<string, number>>({});
   const [extraLegs, setExtraLegs] = useState<ExtraLeg[]>([]);
   const [extraCategory, setExtraCategory] = useState<ExtraCategory>("hedges");
@@ -293,35 +361,28 @@ export default function Home() {
         );
       });
 
-      const sortedAnchors = sortGames(formatted.anchors);
-      setAnchorAId((current) =>
-        current && sortedAnchors.some((game) => game.id === current)
-          ? current
-          : "",
-      );
-      setAnchorBId((current) =>
-        current && sortedAnchors.some((game) => game.id === current)
-          ? current
-          : "",
-      );
+      const sortedAll = sortGames([
+        ...formatted.anchors,
+        ...formatted.hedges,
+        ...formatted.unicorns,
+        ...formatted.others,
+      ]);
+      const hasGame = (id: string) =>
+        Boolean(id) && sortedAll.some((game) => game.id === id);
+
+      setAnchorAId((current) => (hasGame(current) ? current : ""));
+      setAnchorBId((current) => (hasGame(current) ? current : ""));
       setExtraPairs((current) =>
         current
           .map((pair) => ({
-            aId: sortedAnchors.some((game) => game.id === pair.aId)
-              ? pair.aId
-              : "",
-            bId: sortedAnchors.some((game) => game.id === pair.bId)
-              ? pair.bId
-              : "",
+            aId: hasGame(pair.aId) ? pair.aId : "",
+            bId: hasGame(pair.bId) ? pair.bId : "",
           }))
           .filter((pair) => pair.aId || pair.bId),
       );
 
-      const sortedExtras = sortGames(formatted.hedges);
       setExtraGameId((current) =>
-        current && sortedExtras.some((game) => game.id === current)
-          ? current
-          : (sortedExtras[0]?.id ?? ""),
+        hasGame(current) ? current : (sortedAll[0]?.id ?? ""),
       );
     };
 
@@ -381,16 +442,6 @@ export default function Home() {
     };
   }, [reloadToken]);
 
-  const sortedAnchors = useMemo(
-    () => sortGames(visibleGames.anchors),
-    [visibleGames.anchors],
-  );
-  const extraGames = useMemo(() => {
-    if (extraCategory === "others") {
-      return sortGames(visibleGames.others);
-    }
-    return sortGames(visibleGames[extraCategory]);
-  }, [extraCategory, visibleGames]);
   const visibleAllGames = useMemo(
     () =>
       sortGames([
@@ -401,6 +452,12 @@ export default function Home() {
       ]),
     [visibleGames],
   );
+  const extraGames = useMemo(() => {
+    if (extraCategory === "others") {
+      return sortGames(visibleGames.others);
+    }
+    return visibleAllGames;
+  }, [extraCategory, visibleAllGames, visibleGames.others]);
 
   const selectedExtraGame = useMemo(
     () =>
@@ -418,20 +475,20 @@ export default function Home() {
   );
 
   const anchorA = useMemo(
-    () => sortedAnchors.find((game) => game.id === anchorAId) ?? null,
-    [sortedAnchors, anchorAId],
+    () => visibleAllGames.find((game) => game.id === anchorAId) ?? null,
+    [visibleAllGames, anchorAId],
   );
   const anchorB = useMemo(
-    () => sortedAnchors.find((game) => game.id === anchorBId) ?? null,
-    [sortedAnchors, anchorBId],
+    () => visibleAllGames.find((game) => game.id === anchorBId) ?? null,
+    [visibleAllGames, anchorBId],
   );
   const extraPairGames = useMemo(
     () =>
       extraPairs.map((pair) => ({
-        a: sortedAnchors.find((game) => game.id === pair.aId) ?? null,
-        b: sortedAnchors.find((game) => game.id === pair.bId) ?? null,
+        a: visibleAllGames.find((game) => game.id === pair.aId) ?? null,
+        b: visibleAllGames.find((game) => game.id === pair.bId) ?? null,
       })),
-    [extraPairs, sortedAnchors],
+    [extraPairs, visibleAllGames],
   );
   const resolvedPairs = useMemo<AnchorPair[]>(() => {
     const pairs: AnchorPair[] = [];
@@ -451,8 +508,8 @@ export default function Home() {
     [anchorAId, anchorBId, extraPairs],
   );
   const availableExtraAnchors = useMemo(
-    () => sortedAnchors.filter((game) => !usedAnchorIds.includes(game.id)),
-    [sortedAnchors, usedAnchorIds],
+    () => visibleAllGames.filter((game) => !usedAnchorIds.includes(game.id)),
+    [visibleAllGames, usedAnchorIds],
   );
   const pairCount = resolvedPairs.length;
   const coverScale = coverScaleFor(pairCount);
@@ -466,17 +523,44 @@ export default function Home() {
     [resolvedPairs],
   );
 
+  const activeExtraLegs = useMemo(() => {
+    const pairKeys = new Set(
+      resolvedPairs.map((pair) => `${pair.a.id}|${pair.b.id}`),
+    );
+    return extraLegs.filter(
+      (leg) =>
+        !leg.target || pairKeys.has(`${leg.target.aId}|${leg.target.bId}`),
+    );
+  }, [extraLegs, resolvedPairs]);
+  const globalExtraLegs = useMemo(
+    () => activeExtraLegs.filter((leg) => !leg.target),
+    [activeExtraLegs],
+  );
   const extraMultiplier = useMemo(
-    () => extraLegs.reduce((product, leg) => product * leg.game[leg.market], 1),
-    [extraLegs],
+    () => extraLegsProduct(globalExtraLegs),
+    [globalExtraLegs],
+  );
+  const cellExtraCount = useMemo(
+    () => activeExtraLegs.filter((leg) => Boolean(leg.target)).length,
+    [activeExtraLegs],
   );
 
   const tickets = useMemo<OpeningTicket[]>(() => {
     return combinations.map((combo) => {
       const amount = Math.max(cellAmounts[combo.id] ?? equalStake, 0);
-      const boosted =
-        extraLegs.length > 0 && needsCoverBoost(combo.odds, coverMultiplier);
-      const odds = boosted ? combo.odds * extraMultiplier : combo.odds;
+      const pair = resolvedPairs[combo.pairIndex];
+      const applyGlobal =
+        globalExtraLegs.length > 0 &&
+        needsCoverBoost(combo.odds, coverMultiplier);
+      const attached = activeExtraLegs.filter((leg) => {
+        if (!leg.target) {
+          return applyGlobal;
+        }
+        return pair ? ticketMatchesTarget(combo, pair, leg.target) : false;
+      });
+      const multiplier = extraLegsProduct(attached);
+      const boosted = attached.length > 0;
+      const odds = combo.odds * multiplier;
       return {
         ...combo,
         amount,
@@ -484,6 +568,8 @@ export default function Home() {
         baseOdds: combo.odds,
         odds,
         returnValue: amount * odds,
+        extraMultiplier: multiplier,
+        extraLegs: attached,
       };
     });
   }, [
@@ -491,13 +577,14 @@ export default function Home() {
     combinations,
     coverMultiplier,
     equalStake,
-    extraLegs.length,
-    extraMultiplier,
+    activeExtraLegs,
+    globalExtraLegs.length,
+    resolvedPairs,
   ]);
 
   const failsafeTickets = useMemo<FailsafeTicket[]>(
     () =>
-      extraLegs
+      activeExtraLegs
         .flatMap((leg) =>
           failsafeMarketsFor(leg.market).map((market) => {
             const amount = Math.max(leg.failsafe[market], 0);
@@ -515,7 +602,7 @@ export default function Home() {
           }),
         )
         .sort((a, b) => b.returnValue - a.returnValue),
-    [extraLegs],
+    [activeExtraLegs],
   );
 
   const failsafeStake = useMemo(
@@ -581,7 +668,11 @@ export default function Home() {
     }));
   };
 
-  const addExtraLeg = (game = selectedExtraGame, category = extraCategory) => {
+  const addExtraLeg = (
+    game = selectedExtraGame,
+    category = extraCategory,
+    target?: ExtraLegTarget,
+  ) => {
     if (!game || category === "others") {
       return;
     }
@@ -596,6 +687,7 @@ export default function Home() {
         game,
         market: "w",
         failsafe: { d: failsafeDefault, l: failsafeDefault },
+        target,
       },
     ]);
   };
@@ -709,6 +801,13 @@ export default function Home() {
       setExtraPairPicker(null);
     } else if (picker === "hedges" || picker === "unicorns") {
       setExtraGameId(game.id);
+    } else if (picker === "cellExtra" && cellExtraPicker) {
+      addExtraLeg(game, cellExtraPicker.category, {
+        aId: cellExtraPicker.aId,
+        bId: cellExtraPicker.bId,
+        markets: cellExtraPicker.markets,
+      });
+      setCellExtraPicker(null);
     } else if (picker === "individual") {
       setIndividualGameId(game.id);
     }
@@ -732,6 +831,20 @@ export default function Home() {
   const openExtraPairPicker = (index: number, slot: ExtraPairSlot) => {
     setExtraPairPicker({ index, slot });
     setPicker("extraAnchor");
+  };
+
+  const openCellExtraPicker = (
+    pair: AnchorPair,
+    markets: MarketKey[],
+    category: Exclude<ExtraCategory, "others">,
+  ) => {
+    setCellExtraPicker({
+      aId: pair.a.id,
+      bId: pair.b.id,
+      markets,
+      category,
+    });
+    setPicker("cellExtra");
   };
 
   const updateExtraMarket = (id: string, market: MarketKey) => {
@@ -767,6 +880,7 @@ export default function Home() {
     setAnchorBId("");
     setExtraPairs([]);
     setExtraPairPicker(null);
+    setCellExtraPicker(null);
     setCellAmounts({});
     setExtraLegs([]);
     setIndividualBets([]);
@@ -784,8 +898,15 @@ export default function Home() {
 
   const handleExtraCategoryChange = (nextCategory: ExtraCategory) => {
     setExtraCategory(nextCategory);
-    const nextGames = sortGames(visibleGames[nextCategory]);
-    setExtraGameId(nextGames[0]?.id ?? "");
+    if (nextCategory === "others") {
+      return;
+    }
+
+    setExtraGameId((current) =>
+      current && visibleAllGames.some((game) => game.id === current)
+        ? current
+        : (visibleAllGames[0]?.id ?? ""),
+    );
   };
 
   return (
@@ -865,7 +986,7 @@ export default function Home() {
                   {tickets.length || COVER_MULTIPLIER} tickets · $
                   {equalStake.toFixed(2)} per cell · opening $
                   {openingSpread.toFixed(2)}
-                  {extraLegs.length > 0
+                  {activeExtraLegs.length > 0
                     ? ` · each failsafe draw/loss starts at $${failsafeDefault.toFixed(2)}`
                     : ""}
                 </span>
@@ -952,8 +1073,11 @@ export default function Home() {
                   detail={
                     anchorA
                       ? oddsDetail(anchorA)
-                      : `${sortedAnchors.length} anchors available`
+                      : visibleAllGames.length
+                        ? `${visibleAllGames.length} matches available`
+                        : "No matches available"
                   }
+                  disabled={!visibleAllGames.length}
                   onClick={() => setPicker("anchorA")}
                 />
               </div>
@@ -970,8 +1094,11 @@ export default function Home() {
                   detail={
                     anchorB
                       ? oddsDetail(anchorB)
-                      : `${sortedAnchors.length} anchors available`
+                      : visibleAllGames.length
+                        ? `${visibleAllGames.length} matches available`
+                        : "No matches available"
                   }
+                  disabled={!visibleAllGames.length}
                   onClick={() => setPicker("anchorB")}
                 />
               </div>
@@ -1012,9 +1139,12 @@ export default function Home() {
                           detail={
                             games?.a
                               ? oddsDetail(games.a)
-                              : `${availableExtraAnchors.length} anchors available`
+                              : visibleAllGames.length
+                                ? `${availableExtraAnchors.length} matches available`
+                                : "No matches available"
                           }
                           onClick={() => openExtraPairPicker(index, "a")}
+                          disabled={!visibleAllGames.length}
                         />
                       </div>
                       <div>
@@ -1030,9 +1160,12 @@ export default function Home() {
                           detail={
                             games?.b
                               ? oddsDetail(games.b)
-                              : `${availableExtraAnchors.length} anchors available`
+                              : visibleAllGames.length
+                                ? `${availableExtraAnchors.length} matches available`
+                                : "No matches available"
                           }
                           onClick={() => openExtraPairPicker(index, "b")}
+                          disabled={!visibleAllGames.length}
                         />
                       </div>
                     </div>
@@ -1060,13 +1193,24 @@ export default function Home() {
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       {pairCount} pair{pairCount === 1 ? "" : "s"} ·{" "}
                       {COVER_MULTIPLIER} tickets each · {coverMultiplier}×
-                      cover. Hedges and unicorns apply to every pair.
+                      cover. Shared hedges and unicorns apply to every pair.
+                      Cell extras only multiply that cell.
                     </p>
                   </div>
-                  {extraLegs.length > 0 && (
-                    <div className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                      Extra legs ×{extraMultiplier.toFixed(2)} on tickets below{" "}
-                      {coverMultiplier}×
+                  {(globalExtraLegs.length > 0 || cellExtraCount > 0) && (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {globalExtraLegs.length > 0 ? (
+                        <div className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                          Extra legs ×{extraMultiplier.toFixed(2)} on tickets
+                          below {coverMultiplier}×
+                        </div>
+                      ) : null}
+                      {cellExtraCount > 0 ? (
+                        <div className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                          {cellExtraCount} cell extra
+                          {cellExtraCount === 1 ? "" : "s"}
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -1086,12 +1230,11 @@ export default function Home() {
                       ) : null}
                       <CoverMatrix
                         pairIndex={pairIndex}
-                        anchorA={pair.a}
-                        anchorB={pair.b}
+                        pair={pair}
                         tickets={tickets}
                         coverMultiplier={coverMultiplier}
-                        extraMultiplier={extraMultiplier}
                         onStakeChange={updateCellAmount}
+                        onAddCellExtra={openCellExtraPicker}
                       />
                     </div>
                   ))}
@@ -1110,10 +1253,11 @@ export default function Home() {
                 Add a hedge, unicorn, or other
               </h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Extra legs apply only when an opening ticket is below{" "}
-                {coverMultiplier}×, so its return would be less than that
-                pair&apos;s spread. The same hedges and unicorns attach to every
-                pair. Others are matches the auto-rules did not classify.
+                Extra legs without a cell marker apply only when an opening
+                ticket is below {coverMultiplier}×. Add a hedge or unicorn from
+                a grid cell to multiply that cell only; those extras are marked
+                with the anchor teams. You can pick any match as a hedge or
+                unicorn. Others are matches the auto-rules did not classify.
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1154,8 +1298,8 @@ export default function Home() {
                         : selectedExtraGame
                           ? oddsDetail(selectedExtraGame)
                           : extraGames.length
-                            ? `${extraGames.length} available`
-                            : "No picks available"
+                            ? `${extraGames.length} matches available`
+                            : "No matches available"
                     }
                     disabled={!extraGames.length}
                     onClick={() => setPicker(extraCategory)}
@@ -1180,9 +1324,9 @@ export default function Home() {
                 </button>
               )}
 
-              {extraLegs.length > 0 && (
+              {activeExtraLegs.length > 0 && (
                 <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {extraLegs.map((leg) => (
+                  {activeExtraLegs.map((leg) => (
                     <div key={leg.id} className="bet-builder-card">
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -1192,6 +1336,14 @@ export default function Home() {
                           <h4 className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-50">
                             {gameTitle(leg.game)}
                           </h4>
+                          {leg.target ? (
+                            <CellExtraMarker
+                              label={extraLegTargetLabel(
+                                leg.target,
+                                resolvedPairs,
+                              )}
+                            />
+                          ) : null}
                           {formatKickoff(leg.game) ? (
                             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                               {formatKickoff(leg.game)}
@@ -1390,11 +1542,14 @@ export default function Home() {
                         game={resolvedPairs[ticket.pairIndex].b}
                         market={ticket.markets[1]}
                       />
-                      {ticket.boosted &&
-                        extraLegs.map((leg) => (
+                      {ticket.extraLegs.map((leg) => (
                           <SlipLeg
                             key={`${ticket.id}-${leg.id}`}
-                            label={EXTRA_TITLES[leg.category].slice(0, -1)}
+                            label={
+                              leg.target
+                                ? `${EXTRA_TITLES[leg.category].slice(0, -1)} cell`
+                                : EXTRA_TITLES[leg.category].slice(0, -1)
+                            }
                             game={leg.game}
                             market={leg.market}
                           />
@@ -1513,7 +1668,7 @@ export default function Home() {
           </aside>
         </div>
 
-        {extraLegs.length > 0 && (
+        {activeExtraLegs.length > 0 && (
           <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -1543,7 +1698,7 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {extraLegs.map((leg) => {
+              {activeExtraLegs.map((leg) => {
                 const markets = failsafeMarketsFor(leg.market);
                 return (
                   <div key={`${leg.id}-failsafe`} className="bet-builder-card">
@@ -1553,6 +1708,11 @@ export default function Home() {
                     <h3 className="mt-1 text-base font-bold text-zinc-900 dark:text-zinc-50">
                       {gameTitle(leg.game)}
                     </h3>
+                    {leg.target ? (
+                      <CellExtraMarker
+                        label={extraLegTargetLabel(leg.target, resolvedPairs)}
+                      />
+                    ) : null}
                     {formatKickoff(leg.game) ? (
                       <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                         {formatKickoff(leg.game)}
@@ -1636,7 +1796,7 @@ export default function Home() {
               </div>
             </div>
 
-            {extraLegs.length > 0 ? (
+            {activeExtraLegs.length > 0 ? (
               <>
                 <PayoutScenario
                   title="Boosted wins"
@@ -1671,7 +1831,7 @@ export default function Home() {
                   title="Combo wins"
                   detail="Total win range including individual"
                   low={payoutGroup.comboLow}
-                  high={payoutGroup.comboHigh + individualReturn}
+                  high={payoutGroup.comboHigh}
                 />
               </>
             ) : (
@@ -1703,6 +1863,14 @@ export default function Home() {
                   : "Choose an extra pair anchor"
                 : picker === "individual"
                   ? "Choose an individual bet"
+                  : picker === "cellExtra"
+                    ? `Add a ${
+                        cellExtraPicker
+                          ? EXTRA_TITLES[cellExtraPicker.category]
+                              .slice(0, -1)
+                              .toLowerCase()
+                          : "extra"
+                      } to this cell`
                   : picker === "others"
                     ? "Unclassified matches"
                     : `Choose a ${picker ? EXTRA_TITLES[picker].slice(0, -1).toLowerCase() : "match"}`
@@ -1712,30 +1880,19 @@ export default function Home() {
             ? "Search by team name, then classify a match as an anchor, hedge, or unicorn."
             : picker === "individual"
               ? "Search by team name and add a single that stays off the opening book."
-              : "Search by team name and review the 1X2 and strategy odds before selecting."
+              : picker === "cellExtra" && cellExtraPicker
+                ? `This extra only multiplies ${extraLegTargetLabel(
+                    cellExtraPicker,
+                    resolvedPairs,
+                  )}.`
+              : "Every match is listed. Search by team name and review the 1X2 and strategy odds before selecting."
         }
         games={
-          picker === "anchorA" || picker === "anchorB"
-            ? sortedAnchors
-            : picker === "extraAnchor"
-              ? extraPairPicker
-                ? sortedAnchors.filter((game) => {
-                    const currentId =
-                      extraPairs[extraPairPicker.index]?.[
-                        extraPairPicker.slot === "a" ? "aId" : "bId"
-                      ];
-                    return (
-                      game.id === currentId || !usedAnchorIds.includes(game.id)
-                    );
-                  })
-                : availableExtraAnchors
-              : picker === "individual"
-                ? visibleAllGames
-                : picker
-                  ? extraCategory === picker
-                    ? extraGames
-                    : sortGames(visibleGames[picker])
-                  : []
+          picker === "others"
+            ? extraGames
+            : picker
+              ? visibleAllGames
+              : []
         }
         selectedId={
           picker === "anchorA"
@@ -1750,6 +1907,8 @@ export default function Home() {
                   : undefined
                 : picker === "individual"
                   ? individualGameId
+                  : picker === "cellExtra"
+                    ? undefined
                   : extraGameId
         }
         disabledIds={
@@ -1768,6 +1927,14 @@ export default function Home() {
                       ];
                     return id !== currentId;
                   })
+                : picker === "cellExtra" && cellExtraPicker
+                  ? activeExtraLegs
+                      .filter(
+                        (leg) =>
+                          leg.target &&
+                          extraTargetEquals(leg.target, cellExtraPicker),
+                      )
+                      .map((leg) => leg.game.id)
                 : []
         }
         emptyLabel={
@@ -1782,6 +1949,7 @@ export default function Home() {
         onClose={() => {
           setPicker(null);
           setExtraPairPicker(null);
+          setCellExtraPicker(null);
         }}
         onSelect={handlePickerSelect}
         onClassify={classifyOther}
@@ -1792,23 +1960,26 @@ export default function Home() {
 
 type CoverMatrixProps = {
   pairIndex: number;
-  anchorA: FormattedGame;
-  anchorB: FormattedGame;
+  pair: AnchorPair;
   tickets: OpeningTicket[];
   coverMultiplier: number;
-  extraMultiplier: number;
   onStakeChange: (id: string, value: string) => void;
+  onAddCellExtra: (
+    pair: AnchorPair,
+    markets: MarketKey[],
+    category: Exclude<ExtraCategory, "others">,
+  ) => void;
 };
 
 function CoverMatrix({
   pairIndex,
-  anchorA,
-  anchorB,
+  pair,
   tickets,
   coverMultiplier,
-  extraMultiplier,
   onStakeChange,
+  onAddCellExtra,
 }: CoverMatrixProps) {
+  const { a: anchorA, b: anchorB } = pair;
   const findTicket = (row: MarketKey, col: MarketKey) =>
     tickets.find(
       (item) =>
@@ -1821,10 +1992,8 @@ function CoverMatrix({
     const parts = [
       anchorA[ticket.markets[0]].toFixed(2),
       anchorB[ticket.markets[1]].toFixed(2),
+      ...ticket.extraLegs.map((leg) => leg.game[leg.market].toFixed(2)),
     ];
-    if (ticket.boosted) {
-      parts.push(extraMultiplier.toFixed(2));
-    }
     return parts.join(" × ");
   };
 
@@ -1859,6 +2028,7 @@ function CoverMatrix({
               if (!ticket) {
                 return null;
               }
+              const cellExtras = ticket.extraLegs.filter((leg) => leg.target);
 
               return (
                 <div
@@ -1887,6 +2057,21 @@ function CoverMatrix({
                   <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                     {oddsBreakdown(ticket)}
                   </div>
+                  {cellExtras.length > 0 ? (
+                    <div className="mt-2 space-y-1 text-left">
+                      {cellExtras.map((leg) => (
+                        <div
+                          key={leg.id}
+                          className="truncate text-[10px] text-amber-800 dark:text-amber-300"
+                          title={gameTitle(leg.game)}
+                        >
+                          {EXTRA_TITLES[leg.category].slice(0, -1)} ·{" "}
+                          {leg.game.originalData.home_team}{" "}
+                          {leg.game[leg.market].toFixed(2)}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                   <label className="mt-3 block">
                     <span className="mb-1 block text-[10px] uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
                       Stake
@@ -1907,6 +2092,28 @@ function CoverMatrix({
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                       ${ticket.returnValue.toFixed(2)}
                     </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onAddCellExtra(pair, ticket.markets, "hedges")
+                      }
+                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-zinc-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-zinc-600 transition hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                    >
+                      <Plus size={10} />
+                      Hedge
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onAddCellExtra(pair, ticket.markets, "unicorns")
+                      }
+                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-zinc-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-zinc-600 transition hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                    >
+                      <Plus size={10} />
+                      Unicorn
+                    </button>
                   </div>
                 </div>
               );
