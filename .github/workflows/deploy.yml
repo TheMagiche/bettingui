@@ -52,52 +52,50 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Copy compose and nginx config
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.LINODE_HOST }}
+          username: ${{ secrets.LINODE_USER }}
+          key: ${{ secrets.LINODE_SSH_PRIVATE_KEY }}
+          source: "docker-compose.yml,nginx/default.conf"
+          target: "bettingui"
+          overwrite: true
+
       - name: Deploy image to Linode
         uses: appleboy/ssh-action@v1.0.3
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
-          IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          BETTINGUI_IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           APP_PORT: ${{ vars.LINODE_APP_PORT || 80 }}
         with:
           host: ${{ secrets.LINODE_HOST }}
           username: ${{ secrets.LINODE_USER }}
           key: ${{ secrets.LINODE_SSH_PRIVATE_KEY }}
-          envs: GHCR_TOKEN,GHCR_USER,IMAGE,APP_PORT
+          envs: GHCR_TOKEN,GHCR_USER,BETTINGUI_IMAGE,APP_PORT
           script_stop: true
           command_timeout: 15m
           script: |
             set -eu
-            mkdir -p "$HOME/bettingui"
             cd "$HOME/bettingui"
 
             printf '%s\n' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-            printf '%s\n' \
-              "services:" \
-              "  app:" \
-              "    image: ${IMAGE}" \
-              "    container_name: bettingui" \
-              "    ports:" \
-              "      - \"${APP_PORT}:3000\"" \
-              "    restart: unless-stopped" \
-              "    shm_size: \"1gb\"" \
-              > docker-compose.yml
-
             docker compose pull
-            docker compose up -d --remove-orphans
+            docker compose up -d --remove-orphans --no-build
 
             docker logout ghcr.io >/dev/null 2>&1 || true
             docker image prune -f
 
             for i in 1 2 3 4 5 6 7 8 9 10; do
-              if docker exec bettingui node -e "fetch('http://127.0.0.1:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"; then
-                echo "bettingui is up"
+              if docker exec bettingui-nginx wget -qO- http://127.0.0.1/ >/dev/null; then
+                echo "bettingui is up behind nginx"
                 exit 0
               fi
               sleep 3
             done
 
-            echo "Container started but the app did not become ready in time"
+            echo "Container started but nginx did not become ready in time"
             docker compose logs --tail 80
             exit 1
