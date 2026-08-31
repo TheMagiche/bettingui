@@ -16,6 +16,15 @@ export type FormattedGame = {
 
 export type MarketKey = "w" | "d" | "l";
 
+export type GameBucket = "anchors" | "hedges" | "unicorns";
+
+export type IdentifiedGames = {
+  anchors: FormattedGame[];
+  hedges: FormattedGame[];
+  unicorns: FormattedGame[];
+  others: FormattedGame[];
+};
+
 export type AnchorCombo = {
   id: string;
   row: MarketKey;
@@ -47,10 +56,11 @@ export function formatAndIdentifyGames(rawJsonData: RawGame[]) {
   return identifyGames(formattedGames);
 }
 
-export function identifyGames(games: FormattedGame[]) {
+export function identifyGames(games: FormattedGame[]): IdentifiedGames {
   const anchors: FormattedGame[] = [];
   const hedges: FormattedGame[] = [];
   const unicorns: FormattedGame[] = [];
+  const others: FormattedGame[] = [];
 
   for (const game of games) {
     const { w, d, l } = game;
@@ -67,9 +77,57 @@ export function identifyGames(games: FormattedGame[]) {
     // 3. Hedges: d >= 3*w AND l >= 1.5*d
     if (d >= 3 * w && l >= 1.5 * d) {
       hedges.push(game);
+      continue;
+    }
+    others.push(game);
+  }
+  return { anchors, hedges, unicorns, others };
+}
+
+export function applyGameOverrides(
+  identified: IdentifiedGames,
+  overrides: Record<string, GameBucket>
+): IdentifiedGames {
+  const moved: Record<GameBucket, FormattedGame[]> = {
+    anchors: [],
+    hedges: [],
+    unicorns: [],
+  };
+  const others: FormattedGame[] = [];
+
+  for (const game of identified.others) {
+    const bucket = overrides[game.id];
+    if (bucket) {
+      moved[bucket].push(game);
+    } else {
+      others.push(game);
     }
   }
-  return { anchors, hedges, unicorns };
+
+  return {
+    anchors: [...identified.anchors, ...moved.anchors],
+    hedges: [...identified.hedges, ...moved.hedges],
+    unicorns: [...identified.unicorns, ...moved.unicorns],
+    others,
+  };
+}
+
+export function matchesTeamSearch(game: FormattedGame, query: string) {
+  const needle = query.trim().toLowerCase();
+  if (!needle) {
+    return true;
+  }
+
+  const { home_team, away_team } = game.originalData;
+  return (
+    home_team.toLowerCase().includes(needle) ||
+    away_team.toLowerCase().includes(needle) ||
+    `${home_team} vs ${away_team}`.toLowerCase().includes(needle)
+  );
+}
+
+export function isHomeFavorite(game: FormattedGame) {
+  return Number(game.originalData.home_win) <= Number(game.originalData.away_win);
 }
 
 export const MARKET_KEYS: MarketKey[] = ["w", "d", "l"];

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  applyGameOverrides,
   COVER_MULTIPLIER,
   createNineAnchorOdds,
   failsafeMarketsFor,
@@ -10,21 +11,23 @@ import {
   MARKET_KEYS,
   needsCoverBoost,
 } from "@/utils/bettingLogic";
-import type { FormattedGame, MarketKey, RawGame } from "@/utils/bettingLogic";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import type {
+  FormattedGame,
+  GameBucket,
+  IdentifiedGames,
+  MarketKey,
+  RawGame,
+} from "@/utils/bettingLogic";
+import GameSelectModal from "@/app/components/GameSelectModal";
+import { ChevronLeft, ChevronRight, Plus, Search, Trash2 } from "lucide-react";
 
-type IdentifiedGames = {
-  anchors: FormattedGame[];
-  hedges: FormattedGame[];
-  unicorns: FormattedGame[];
-};
-
-type ExtraCategory = "hedges" | "unicorns";
+type ExtraCategory = "hedges" | "unicorns" | "others";
 type GamesSource = "live" | "fallback" | "loading";
+type PickerTarget = "anchorA" | "anchorB" | ExtraCategory;
 
 type ExtraLeg = {
   id: string;
-  category: ExtraCategory;
+  category: Exclude<ExtraCategory, "others">;
   game: FormattedGame;
   market: MarketKey;
   failsafe: {
@@ -36,7 +39,7 @@ type ExtraLeg = {
 type FailsafeTicket = {
   id: string;
   legId: string;
-  category: ExtraCategory;
+  category: Exclude<ExtraCategory, "others">;
   game: FormattedGame;
   market: "d" | "l";
   amount: number;
@@ -53,6 +56,14 @@ const MARKET_TITLES: Record<MarketKey, string> = {
 const EXTRA_TITLES: Record<ExtraCategory, string> = {
   hedges: "Hedges",
   unicorns: "Unicorns",
+  others: "Others",
+};
+
+const emptyIdentifiedGames: IdentifiedGames = {
+  anchors: [],
+  hedges: [],
+  unicorns: [],
+  others: [],
 };
 
 function sortGames(games: FormattedGame[]) {
@@ -66,11 +77,8 @@ function sortGames(games: FormattedGame[]) {
 }
 
 export default function Home() {
-  const [games, setGames] = useState<IdentifiedGames>({
-    anchors: [],
-    hedges: [],
-    unicorns: [],
-  });
+  const [classified, setClassified] = useState<IdentifiedGames>(emptyIdentifiedGames);
+  const [overrides, setOverrides] = useState<Record<string, GameBucket>>({});
   const [spread, setSpread] = useState<number>(90);
   const [anchorAId, setAnchorAId] = useState("");
   const [anchorBId, setAnchorBId] = useState("");
@@ -80,7 +88,13 @@ export default function Home() {
   const [extraGameId, setExtraGameId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [gamesSource, setGamesSource] = useState<GamesSource>("loading");
+  const [picker, setPicker] = useState<PickerTarget | null>(null);
   const itemsPerPage = 5;
+
+  const games = useMemo(
+    () => applyGameOverrides(classified, overrides),
+    [classified, overrides]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +102,13 @@ export default function Home() {
 
     const applyGames = (data: RawGame[]) => {
       const formatted = formatAndIdentifyGames(data);
-      setGames(formatted);
+      setClassified(formatted);
+      setOverrides((current) => {
+        const otherIds = new Set(formatted.others.map((game) => game.id));
+        return Object.fromEntries(
+          Object.entries(current).filter(([id]) => otherIds.has(id))
+        );
+      });
 
       const sortedAnchors = sortGames(formatted.anchors);
       setAnchorAId((current) =>
@@ -155,10 +175,12 @@ export default function Home() {
   }, []);
 
   const sortedAnchors = useMemo(() => sortGames(games.anchors), [games.anchors]);
-  const extraGames = useMemo(
-    () => sortGames(games[extraCategory]),
-    [games, extraCategory]
-  );
+  const extraGames = useMemo(() => {
+    if (extraCategory === "others") {
+      return sortGames(games.others);
+    }
+    return sortGames(games[extraCategory]);
+  }, [extraCategory, games]);
 
   const selectedExtraGame = useMemo(
     () => extraGames.find((game) => game.id === extraGameId) ?? extraGames[0] ?? null,
@@ -264,23 +286,50 @@ export default function Home() {
     }));
   };
 
-  const addExtraLeg = () => {
-    if (!selectedExtraGame) {
+  const addExtraLeg = (game = selectedExtraGame, category = extraCategory) => {
+    if (!game || category === "others") {
       return;
     }
 
     setExtraLegs((prev) => [
       ...prev,
       {
-        id: `${extraCategory}-${selectedExtraGame.id}-${Date.now()}-${Math.random()
+        id: `${category}-${game.id}-${Date.now()}-${Math.random()
           .toString(16)
           .slice(2)}`,
-        category: extraCategory,
-        game: selectedExtraGame,
+        category,
+        game,
         market: "w",
         failsafe: { d: 0, l: 0 },
       },
     ]);
+  };
+
+  const classifyOther = (game: FormattedGame, bucket: GameBucket) => {
+    setOverrides((current) => ({ ...current, [game.id]: bucket }));
+    if (bucket === "anchors") {
+      setPicker(null);
+      return;
+    }
+
+    setExtraCategory(bucket);
+    setExtraGameId(game.id);
+    setPicker(null);
+  };
+
+  const handlePickerSelect = (game: FormattedGame) => {
+    if (picker === "anchorA") {
+      setAnchorAId(game.id);
+      setCellAmounts({});
+      setCurrentPage(1);
+    } else if (picker === "anchorB") {
+      setAnchorBId(game.id);
+      setCellAmounts({});
+      setCurrentPage(1);
+    } else if (picker === "hedges" || picker === "unicorns") {
+      setExtraGameId(game.id);
+    }
+    setPicker(null);
   };
 
   const updateExtraMarket = (id: string, market: MarketKey) => {
@@ -420,49 +469,34 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <label className="block">
+              <div>
                 <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
                   Anchor 1
                 </span>
-                <select
-                  value={anchorAId}
-                  onChange={(e) => {
-                    setAnchorAId(e.target.value);
-                    setCellAmounts({});
-                    setCurrentPage(1);
-                  }}
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                >
-                  <option value="">Choose first anchor</option>
-                  {sortedAnchors.map((game) => (
-                    <option key={game.id} value={game.id} disabled={game.id === anchorBId}>
-                      {gameTitle(game)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
+                <PickerButton
+                  label={anchorA ? gameTitle(anchorA) : "Search and choose first anchor"}
+                  detail={
+                    anchorA
+                      ? `W ${anchorA.w.toFixed(2)} · D ${anchorA.d.toFixed(2)} · L ${anchorA.l.toFixed(2)}`
+                      : `${sortedAnchors.length} anchors available`
+                  }
+                  onClick={() => setPicker("anchorA")}
+                />
+              </div>
+              <div>
                 <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
                   Anchor 2
                 </span>
-                <select
-                  value={anchorBId}
-                  onChange={(e) => {
-                    setAnchorBId(e.target.value);
-                    setCellAmounts({});
-                    setCurrentPage(1);
-                  }}
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                >
-                  <option value="">Choose second anchor</option>
-                  {sortedAnchors.map((game) => (
-                    <option key={game.id} value={game.id} disabled={game.id === anchorAId}>
-                      {gameTitle(game)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <PickerButton
+                  label={anchorB ? gameTitle(anchorB) : "Search and choose second anchor"}
+                  detail={
+                    anchorB
+                      ? `W ${anchorB.w.toFixed(2)} · D ${anchorB.d.toFixed(2)} · L ${anchorB.l.toFixed(2)}`
+                      : `${sortedAnchors.length} anchors available`
+                  }
+                  onClick={() => setPicker("anchorB")}
+                />
+              </div>
             </div>
 
             {anchorA && anchorB && tickets.length === 9 ? (
@@ -576,10 +610,11 @@ export default function Home() {
             )}
 
             <div className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-              <h3 className="text-lg font-bold">Add a hedge or unicorn</h3>
+              <h3 className="text-lg font-bold">Add a hedge, unicorn, or other</h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                 Extra legs apply only when an opening ticket is below {COVER_MULTIPLIER}×,
-                so its return would be less than the original spread.
+                so its return would be less than the original spread. Others are matches
+                the auto-rules did not classify.
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -602,37 +637,48 @@ export default function Home() {
                   </select>
                 </label>
 
-                <label className="block">
+                <div>
                   <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
                     Team selection
                   </span>
-                  <select
-                    value={selectedExtraGame?.id ?? ""}
-                    onChange={(e) => setExtraGameId(e.target.value)}
+                  <PickerButton
+                    label={
+                      extraCategory === "others"
+                        ? "Search unclassified matches"
+                        : selectedExtraGame
+                          ? gameTitle(selectedExtraGame)
+                          : `Search and choose a ${EXTRA_TITLES[extraCategory].slice(0, -1).toLowerCase()}`
+                    }
+                    detail={
+                      extraCategory === "others"
+                        ? `${games.others.length} matches not auto-classified`
+                        : selectedExtraGame
+                          ? `W ${selectedExtraGame.w.toFixed(2)} · D ${selectedExtraGame.d.toFixed(2)} · L ${selectedExtraGame.l.toFixed(2)}`
+                          : extraGames.length
+                            ? `${extraGames.length} available`
+                            : "No picks available"
+                    }
                     disabled={!extraGames.length}
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                  >
-                    {extraGames.length === 0 ? (
-                      <option value="">No picks available</option>
-                    ) : (
-                      extraGames.map((game) => (
-                        <option key={game.id} value={game.id}>
-                          {gameTitle(game)}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </label>
+                    onClick={() => setPicker(extraCategory)}
+                  />
+                </div>
               </div>
 
-              <button
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:disabled:bg-zinc-700"
-                onClick={addExtraLeg}
-                disabled={!selectedExtraGame}
-              >
-                <Plus size={16} />
-                Add {EXTRA_TITLES[extraCategory].slice(0, -1)}
-              </button>
+              {extraCategory === "others" ? (
+                <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+                  Classify an unclassified match as an anchor, hedge, or unicorn.
+                  Hedges and unicorns stay selected here so you can add them next.
+                </p>
+              ) : (
+                <button
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:disabled:bg-zinc-700"
+                  onClick={() => addExtraLeg()}
+                  disabled={!selectedExtraGame}
+                >
+                  <Plus size={16} />
+                  Add {EXTRA_TITLES[extraCategory].slice(0, -1)}
+                </button>
+              )}
 
               {extraLegs.length > 0 && (
                 <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -868,6 +914,87 @@ export default function Home() {
           </section>
         )}
       </main>
+
+      <GameSelectModal
+        open={picker !== null}
+        title={
+          picker === "anchorA"
+            ? "Choose first anchor"
+            : picker === "anchorB"
+              ? "Choose second anchor"
+              : picker === "others"
+                ? "Unclassified matches"
+                : `Choose a ${picker ? EXTRA_TITLES[picker].slice(0, -1).toLowerCase() : "match"}`
+        }
+        description={
+          picker === "others"
+            ? "Search by team name, then classify a match as an anchor, hedge, or unicorn."
+            : "Search by team name and review the 1X2 and strategy odds before selecting."
+        }
+        games={
+          picker === "anchorA" || picker === "anchorB"
+            ? sortedAnchors
+            : picker
+              ? extraCategory === picker
+                ? extraGames
+                : sortGames(games[picker])
+              : []
+        }
+        selectedId={
+          picker === "anchorA"
+            ? anchorAId
+            : picker === "anchorB"
+              ? anchorBId
+              : extraGameId
+        }
+        disabledIds={
+          picker === "anchorA"
+            ? [anchorBId]
+            : picker === "anchorB"
+              ? [anchorAId]
+              : []
+        }
+        emptyLabel={
+          picker === "others"
+            ? "No unclassified matches match that team name"
+            : "No matches match that team name"
+        }
+        mode={picker === "others" ? "classify" : "select"}
+        onClose={() => setPicker(null)}
+        onSelect={handlePickerSelect}
+        onClassify={classifyOther}
+      />
     </div>
+  );
+}
+
+function PickerButton({
+  label,
+  detail,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  detail: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-full items-center justify-between gap-3 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-left outline-none transition hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800"
+    >
+      <span>
+        <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-50">
+          {label}
+        </span>
+        <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
+          {detail}
+        </span>
+      </span>
+      <Search size={16} className="shrink-0 text-zinc-400" />
+    </button>
   );
 }
