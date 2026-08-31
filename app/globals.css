@@ -56,4 +56,17 @@
   .betslip-card {
     @apply rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950;
   }
+
+  .loading-bar {
+    animation: loading-bar-slide 1.1s ease-in-out infinite;
+  }
+}
+
+@keyframes loading-bar-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
 }

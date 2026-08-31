@@ -31,7 +31,7 @@ import type {
 } from "@/utils/bettingLogic";
 import DateFilterChips from "@/app/components/DateFilterChips";
 import GameSelectModal from "@/app/components/GameSelectModal";
-import { ChevronLeft, ChevronRight, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 
 type ExtraCategory = "hedges" | "unicorns" | "others";
 type GamesSource = "live" | "fallback" | "loading";
@@ -208,9 +208,12 @@ export default function Home() {
   const [extraGameId, setExtraGameId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [gamesSource, setGamesSource] = useState<GamesSource>("loading");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [picker, setPicker] = useState<PickerTarget | null>(null);
   const [dateFilter, setDateFilter] = useState(todayDateKey);
   const itemsPerPage = 9;
+  const isBusy = gamesSource === "loading" || isRefreshing;
 
   const games = useMemo(
     () => applyGameOverrides(classified, overrides),
@@ -274,7 +277,7 @@ export default function Home() {
       );
     };
 
-    const loadFallback = fetch("/betgames.json")
+    const loadFallback = fetch("/betgames.json", { cache: "no-store" })
       .then((res) => {
         if (!res.ok) {
           throw new Error("Failed to load betgames.json");
@@ -289,7 +292,7 @@ export default function Home() {
       })
       .catch((err) => console.error("Failed to load fallback matches", err));
 
-    const loadLive = fetch("/api/games")
+    const loadLive = fetch("/api/games", { cache: "no-store" })
       .then((res) => {
         if (!res.ok) {
           throw new Error("Failed to load live matches");
@@ -310,13 +313,14 @@ export default function Home() {
     Promise.allSettled([loadFallback, loadLive]).then(() => {
       if (!cancelled) {
         setGamesSource((current) => (current === "loading" ? "fallback" : current));
+        setIsRefreshing(false);
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   const sortedAnchors = useMemo(
     () => sortGames(visibleGames.anchors),
@@ -611,6 +615,15 @@ export default function Home() {
     setCurrentPage(1);
   };
 
+  const refreshGames = () => {
+    if (isBusy) {
+      return;
+    }
+
+    setIsRefreshing(true);
+    setReloadToken((token) => token + 1);
+  };
+
   const handleExtraCategoryChange = (nextCategory: ExtraCategory) => {
     setExtraCategory(nextCategory);
     const nextGames = sortGames(visibleGames[nextCategory]);
@@ -618,21 +631,57 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100">
-      <header className="border-b border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mx-auto max-w-6xl px-6 py-4">
-          <h1 className="text-2xl font-bold">Betting Strategy Analyzer</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Each pair of anchors creates 9 opening odds. Extra pairs share the
-            same hedges and unicorns.
-          </p>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            {gamesSource === "live"
-              ? "Live SportPesa matches loaded"
-              : gamesSource === "loading"
-                ? "Loading live SportPesa matches…"
-                : "Using saved sample matches"}
-          </p>
+    <div
+      className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100"
+      aria-busy={isBusy}
+    >
+      <header className="relative border-b border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        {isBusy ? (
+          <div
+            className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-blue-100 dark:bg-blue-950"
+            aria-hidden="true"
+          >
+            <div className="loading-bar h-full w-1/3 bg-blue-600 dark:bg-blue-400" />
+          </div>
+        ) : null}
+        <div className="mx-auto flex max-w-6xl items-start justify-between gap-4 px-6 py-4">
+          <div>
+            <h1 className="text-2xl font-bold">Betting Strategy Analyzer</h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Each pair of anchors creates 9 opening odds. Extra pairs share the
+              same hedges and unicorns.
+            </p>
+            <p className="mt-1 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+              {isBusy ? (
+                <RefreshCw
+                  size={12}
+                  className="animate-spin text-blue-600 dark:text-blue-400"
+                  aria-hidden="true"
+                />
+              ) : null}
+              {isRefreshing
+                ? "Refreshing matches…"
+                : gamesSource === "live"
+                  ? "Live SportPesa matches loaded"
+                  : gamesSource === "loading"
+                    ? "Loading live SportPesa matches…"
+                    : "Using saved sample matches"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={refreshGames}
+            disabled={isBusy}
+            aria-busy={isBusy}
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:border-blue-400 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+          >
+            <RefreshCw
+              size={14}
+              className={isBusy ? "animate-spin" : ""}
+              aria-hidden="true"
+            />
+            {isBusy ? "Loading" : "Refresh"}
+          </button>
         </div>
       </header>
 
@@ -708,11 +757,19 @@ export default function Home() {
               <div className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-200">
                 Match date
               </div>
-              <DateFilterChips
-                dates={matchDates}
-                value={dateFilter}
-                onChange={setDateFilter}
-              />
+              {gamesSource === "loading" && allGames.length === 0 ? (
+                <div className="flex flex-wrap gap-2" aria-hidden="true">
+                  <div className="h-7 w-16 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
+                  <div className="h-7 w-20 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
+                  <div className="h-7 w-24 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
+                </div>
+              ) : (
+                <DateFilterChips
+                  dates={matchDates}
+                  value={dateFilter}
+                  onChange={setDateFilter}
+                />
+              )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
