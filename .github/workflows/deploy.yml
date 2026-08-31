@@ -52,6 +52,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Prepare remote deploy directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LINODE_HOST }}
+          username: ${{ secrets.LINODE_USER }}
+          key: ${{ secrets.LINODE_SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -eu
+            mkdir -p "$HOME/bettingui/nginx"
+            if [ -d "$HOME/bettingui/nginx/default.conf" ]; then
+              rm -rf "$HOME/bettingui/nginx/default.conf"
+            fi
+
       - name: Copy compose and nginx config
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -80,6 +94,19 @@ jobs:
             set -eu
             cd "$HOME/bettingui"
 
+            if [ -f default.conf ] && [ ! -f nginx/default.conf ]; then
+              mkdir -p nginx
+              mv default.conf nginx/default.conf
+            fi
+            if [ -d nginx/default.conf ]; then
+              rm -rf nginx/default.conf
+            fi
+            if [ ! -f nginx/default.conf ]; then
+              echo "nginx/default.conf is missing after copy"
+              find . -maxdepth 3 -print
+              exit 1
+            fi
+
             DOCKER_CONFIG=$(mktemp -d)
             export DOCKER_CONFIG
             trap 'rm -rf "$DOCKER_CONFIG"' EXIT
@@ -89,12 +116,15 @@ jobs:
             chmod 600 "$DOCKER_CONFIG/config.json"
 
             docker compose pull
-            docker compose up -d --remove-orphans --no-build
+            docker compose up -d --remove-orphans --no-build --force-recreate
 
             docker image prune -f
 
-            for i in 1 2 3 4 5 6 7 8 9 10; do
-              if docker exec bettingui-nginx wget -qO- http://127.0.0.1/ >/dev/null; then
+            i=0
+            while [ "$i" -lt 40 ]; do
+              i=$((i + 1))
+              if docker exec bettingui-nginx wget -q -O /dev/null -T 5 http://127.0.0.1/nginx-health \
+                && docker exec bettingui-nginx wget -q -O /dev/null -T 5 http://127.0.0.1/; then
                 echo "bettingui is up behind nginx"
                 exit 0
               fi
@@ -102,5 +132,7 @@ jobs:
             done
 
             echo "Container started but nginx did not become ready in time"
-            docker compose logs --tail 80
+            docker compose ps -a
+            ls -la nginx || true
+            docker compose logs --tail 120
             exit 1
