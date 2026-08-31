@@ -14,6 +14,7 @@ import {
   gameTitle,
   MARKET_KEYS,
   needsCoverBoost,
+  returnRange,
   todayDateKey,
 } from "@/utils/bettingLogic";
 import type {
@@ -71,6 +72,49 @@ const emptyIdentifiedGames: IdentifiedGames = {
   unicorns: [],
   others: [],
 };
+
+function SlipLeg({
+  label,
+  game,
+  market,
+}: {
+  label: string;
+  game: FormattedGame;
+  market: MarketKey;
+}) {
+  return (
+    <div className="rounded-lg bg-zinc-100 px-2.5 py-2 dark:bg-zinc-800">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-0.5 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+        {gameTitle(game)}
+      </div>
+      <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+        {MARKET_TITLES[market]} @ {game[market].toFixed(2)}
+      </div>
+    </div>
+  );
+}
+
+function SlipPayout({ stake, odds, toWin }: { stake: number; odds: number; toWin: number }) {
+  return (
+    <div className="mt-2 space-y-1 text-xs">
+      <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
+        <span>Stake</span>
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">${stake.toFixed(2)}</span>
+      </div>
+      <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
+        <span>Odds</span>
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">{odds.toFixed(2)}</span>
+      </div>
+      <div className="flex items-center justify-between font-semibold text-emerald-600 dark:text-emerald-400">
+        <span>Amount to win</span>
+        <span>${toWin.toFixed(2)}</span>
+      </div>
+    </div>
+  );
+}
 
 function oddsDetail(game: FormattedGame) {
   const kickoff = formatKickoff(game);
@@ -300,14 +344,9 @@ export default function Home() {
 
   const workingSpread = spread + failsafeStake;
 
-  const lowestReturn = useMemo(
-    () => (tickets.length ? Math.min(...tickets.map((ticket) => ticket.returnValue)) : 0),
-    [tickets]
-  );
-
-  const highestReturn = useMemo(
-    () => (tickets.length ? Math.max(...tickets.map((ticket) => ticket.returnValue)) : 0),
-    [tickets]
+  const { lowest: lowestReturn, highest: highestReturn } = useMemo(
+    () => returnRange(tickets, failsafeTickets),
+    [failsafeTickets, tickets]
   );
 
   const paginatedTickets = useMemo(() => {
@@ -791,23 +830,43 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-3">
               {paginatedTickets.map((ticket) => (
                 <div key={ticket.id} className="betslip-item py-3">
-                  <div className="font-medium text-sm">
-                    {ticket.row.toUpperCase()} × {ticket.col.toUpperCase()}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium text-sm">
+                      {ticket.row.toUpperCase()} × {ticket.col.toUpperCase()}
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+                      {ticket.boosted
+                        ? "Boosted"
+                        : ticket.baseOdds >= COVER_MULTIPLIER
+                          ? `${COVER_MULTIPLIER}× cover`
+                          : "Opening"}
+                    </span>
                   </div>
-                  <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                    Odds {ticket.odds.toFixed(2)} · Stake ${ticket.amount.toFixed(2)}
-                    {ticket.boosted
-                      ? " · boosted"
-                      : ticket.baseOdds >= COVER_MULTIPLIER
-                        ? ` · ${COVER_MULTIPLIER}× cover`
-                        : ""}
-                  </div>
-                  <div className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                    Return ${ticket.returnValue.toFixed(2)}
-                  </div>
+
+                  {anchorA && anchorB && (
+                    <div className="mt-2 space-y-1.5">
+                      <SlipLeg label="Anchor 1" game={anchorA} market={ticket.row} />
+                      <SlipLeg label="Anchor 2" game={anchorB} market={ticket.col} />
+                      {ticket.boosted &&
+                        extraLegs.map((leg) => (
+                          <SlipLeg
+                            key={`${ticket.id}-${leg.id}`}
+                            label={EXTRA_TITLES[leg.category].slice(0, -1)}
+                            game={leg.game}
+                            market={leg.market}
+                          />
+                        ))}
+                    </div>
+                  )}
+
+                  <SlipPayout
+                    stake={ticket.amount}
+                    odds={ticket.odds}
+                    toWin={ticket.returnValue}
+                  />
                 </div>
               ))}
               {tickets.length === 0 && (
@@ -846,15 +905,16 @@ export default function Home() {
                 </div>
                 {failsafeTickets.map((ticket) => (
                   <div key={ticket.id} className="betslip-item py-3">
-                    <div className="font-medium text-sm">
-                      {gameTitle(ticket.game)} · {MARKET_TITLES[ticket.market]}
-                    </div>
-                    <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                      Odds {ticket.odds.toFixed(2)} · Stake ${ticket.amount.toFixed(2)}
-                    </div>
-                    <div className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      Return ${ticket.returnValue.toFixed(2)}
-                    </div>
+                    <SlipLeg
+                      label={`${EXTRA_TITLES[ticket.category].slice(0, -1)} failsafe`}
+                      game={ticket.game}
+                      market={ticket.market}
+                    />
+                    <SlipPayout
+                      stake={ticket.amount}
+                      odds={ticket.odds}
+                      toWin={ticket.returnValue}
+                    />
                   </div>
                 ))}
               </div>
