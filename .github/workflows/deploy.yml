@@ -61,7 +61,8 @@ jobs:
           source: "docker-compose.yml,nginx/default.conf"
           target: "bettingui"
           overwrite: true
-
+      - name: Silent Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login --password-stdin 2>/dev/null
       - name: Deploy image to Linode
         uses: appleboy/ssh-action@v1.0.3
         env:
