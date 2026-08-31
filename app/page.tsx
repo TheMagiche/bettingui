@@ -6,7 +6,9 @@ import {
   availableDateKeys,
   COVER_MULTIPLIER,
   createNineAnchorOdds,
+  FAILSAFE_DEFAULT_STAKE,
   failsafeMarketsFor,
+  failsafePayoutGroup,
   filterGamesByDate,
   formatAndIdentifyGames,
   formatKickoff,
@@ -345,6 +347,11 @@ export default function Home() {
 
   const workingSpread = spread + failsafeStake;
 
+  const payoutGroup = useMemo(
+    () => failsafePayoutGroup(tickets, failsafeTickets),
+    [failsafeTickets, tickets]
+  );
+
   const lowestReturn = useMemo(
     () => (tickets.length ? Math.min(...tickets.map((ticket) => ticket.returnValue)) : 0),
     [tickets]
@@ -389,7 +396,7 @@ export default function Home() {
         category,
         game,
         market: "w",
-        failsafe: { d: 0, l: 0 },
+        failsafe: { d: FAILSAFE_DEFAULT_STAKE, l: FAILSAFE_DEFAULT_STAKE },
       },
     ]);
   };
@@ -495,30 +502,14 @@ export default function Home() {
                 />
                 <span className="text-sm text-zinc-500 dark:text-zinc-400">
                   Default stake per cell: ${(spread / COVER_MULTIPLIER).toFixed(2)}
-                  {failsafeStake > 0
-                    ? ` · failsafe adds $${failsafeStake.toFixed(2)} to the spread`
+                  {extraLegs.length > 0
+                    ? ` · each failsafe draw/loss starts at $${FAILSAFE_DEFAULT_STAKE.toFixed(2)}`
                     : ""}
                 </span>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-4">
-              <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-                  Opening spread
-                </div>
-                <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-                  ${spread.toFixed(2)}
-                </div>
-              </div>
-              <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-                  Total stake
-                </div>
-                <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-                  ${totalStake.toFixed(2)}
-                </div>
-              </div>
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
                 <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
                   Lowest return
@@ -961,8 +952,9 @@ export default function Home() {
                 </div>
                 <h2 className="mt-1 text-2xl font-bold">Draw and loss cover</h2>
                 <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  If a hedge or unicorn misses, these standalone draw and loss bets
-                  protect the opening tickets. Their stakes are added to the initial spread.
+                  If a hedge or unicorn misses, boosted tickets pay nothing. Either
+                  draw or loss still hits, and that failsafe is a given in the payout
+                  group. Each side starts at ${FAILSAFE_DEFAULT_STAKE.toFixed(2)}.
                 </p>
               </div>
               <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
@@ -1015,7 +1007,7 @@ export default function Home() {
                             </div>
                             <label className="mt-3 block">
                               <span className="mb-1 block text-[10px] uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
-                                Amount added to spread
+                                Failsafe stake
                               </span>
                               <input
                                 type="number"
@@ -1044,6 +1036,69 @@ export default function Home() {
             </div>
           </section>
         )}
+
+        <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+            <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                Total stake
+              </div>
+              <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                ${totalStake.toFixed(2)}
+              </div>
+              <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                Opening ${openingStake.toFixed(2)}
+                {failsafeStake > 0 ? ` + failsafe $${failsafeStake.toFixed(2)}` : ""}
+              </div>
+            </div>
+
+            {extraLegs.length > 0 ? (
+              <>
+                <PayoutScenario
+                  title="Boosted wins"
+                  detail="Boosted tickets including extras"
+                  low={payoutGroup.boostedLow}
+                  high={payoutGroup.boostedHigh}
+                />
+                <PayoutScenario
+                  title="Unboosted wins"
+                  detail={
+                    payoutGroup.unboostedHigh === 0 && payoutGroup.unboostedLow === 0
+                      ? "No unboosted tickets"
+                      : "9× cover tickets"
+                  }
+                  low={payoutGroup.unboostedLow}
+                  high={payoutGroup.unboostedHigh}
+                />
+                <PayoutScenario
+                  title="Failsafe draws"
+                  detail="Failsafe draw, from boosted miss up to unboosted"
+                  low={payoutGroup.drawLow}
+                  high={payoutGroup.drawHigh}
+                />
+                <PayoutScenario
+                  title="Failsafe losses"
+                  detail="Failsafe loss, from boosted miss up to unboosted"
+                  low={payoutGroup.lossLow}
+                  high={payoutGroup.lossHigh}
+                />
+                <PayoutScenario
+                  title="Combo wins"
+                  detail="Failsafe floor, up to unboosted plus draw or loss"
+                  low={payoutGroup.comboLow}
+                  high={payoutGroup.comboHigh}
+                />
+              </>
+            ) : (
+              <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800 sm:col-span-1 xl:col-span-2 2xl:col-span-5">
+                <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                  Total payout group
+                </div>
+                <div className="text-xl font-bold text-zinc-400 dark:text-zinc-500">—</div>
+              </div>
+            )}
+          </div>
+        </section>
       </main>
 
       <GameSelectModal
@@ -1098,6 +1153,33 @@ export default function Home() {
         onSelect={handlePickerSelect}
         onClassify={classifyOther}
       />
+    </div>
+  );
+}
+
+function PayoutScenario({
+  title,
+  detail,
+  low,
+  high,
+}: {
+  title: string;
+  detail: string;
+  low: number;
+  high: number;
+}) {
+  const range =
+    Math.abs(high - low) < 0.005
+      ? `$${low.toFixed(2)}`
+      : `$${low.toFixed(2)} – $${high.toFixed(2)}`;
+
+  return (
+    <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
+      <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+        {title}
+      </div>
+      <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{range}</div>
+      <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{detail}</div>
     </div>
   );
 }

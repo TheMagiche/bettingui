@@ -257,9 +257,87 @@ export function needsCoverBoost(odds: number) {
 }
 
 export const FAILSAFE_MARKETS = ["d", "l"] as const;
+export const FAILSAFE_DEFAULT_STAKE = 10;
 
 export function failsafeMarketsFor(market: MarketKey) {
   return FAILSAFE_MARKETS.filter((key) => key !== market);
+}
+
+function payoutRange(values: number[]) {
+  if (values.length === 0) {
+    return { low: 0, high: 0 };
+  }
+
+  return {
+    low: Math.min(...values),
+    high: Math.max(...values),
+  };
+}
+
+function leveragedEarnings(
+  failsafeReturns: number[],
+  unboostedReturns: number[],
+  hasBoosted: boolean
+) {
+  if (failsafeReturns.length === 0) {
+    return { low: 0, high: 0, values: [] as number[] };
+  }
+
+  const openingParts = [
+    ...(hasBoosted ? [0] : []),
+    ...unboostedReturns,
+  ];
+  if (openingParts.length === 0) {
+    openingParts.push(0);
+  }
+
+  const values: number[] = [];
+  for (const opening of openingParts) {
+    for (const failsafe of failsafeReturns) {
+      values.push(opening + failsafe);
+    }
+  }
+
+  return { ...payoutRange(values), values };
+}
+
+export function failsafePayoutGroup(
+  tickets: { boosted: boolean; returnValue: number }[],
+  failsafeTickets: { market: "d" | "l"; amount: number; returnValue: number }[]
+) {
+  const boostedReturns = tickets
+    .filter((ticket) => ticket.boosted)
+    .map((ticket) => ticket.returnValue);
+  const unboostedReturns = tickets
+    .filter((ticket) => !ticket.boosted)
+    .map((ticket) => ticket.returnValue);
+  const fundedFailsafes = failsafeTickets.filter((ticket) => ticket.amount > 0);
+  const drawReturns = fundedFailsafes
+    .filter((ticket) => ticket.market === "d")
+    .map((ticket) => ticket.returnValue);
+  const lossReturns = fundedFailsafes
+    .filter((ticket) => ticket.market === "l")
+    .map((ticket) => ticket.returnValue);
+
+  const hasBoosted = boostedReturns.length > 0;
+  const boosted = payoutRange(boostedReturns);
+  const unboosted = payoutRange(unboostedReturns);
+  const draws = leveragedEarnings(drawReturns, unboostedReturns, hasBoosted);
+  const losses = leveragedEarnings(lossReturns, unboostedReturns, hasBoosted);
+  const combo = payoutRange([...draws.values, ...losses.values]);
+
+  return {
+    boostedLow: boosted.low,
+    boostedHigh: boosted.high,
+    unboostedLow: unboosted.low,
+    unboostedHigh: unboosted.high,
+    drawLow: draws.low,
+    drawHigh: draws.high,
+    lossLow: losses.low,
+    lossHigh: losses.high,
+    comboLow: combo.low,
+    comboHigh: combo.high,
+  };
 }
 
 export function createNineAnchorOdds(
