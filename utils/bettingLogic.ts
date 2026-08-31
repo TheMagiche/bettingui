@@ -262,34 +262,6 @@ export function failsafeMarketsFor(market: MarketKey) {
   return FAILSAFE_MARKETS.filter((key) => key !== market);
 }
 
-export function returnRange(
-  tickets: { boosted: boolean; returnValue: number }[],
-  failsafeTickets: { amount: number; returnValue: number }[]
-) {
-  const openingReturns = tickets.map((ticket) => ticket.returnValue);
-  const fundedFailsafes = failsafeTickets.filter((ticket) => ticket.amount > 0);
-
-  const extraMissReturns = fundedFailsafes.flatMap((failsafe) => {
-    if (tickets.length === 0) {
-      return [failsafe.returnValue];
-    }
-
-    return tickets.map(
-      (ticket) => (ticket.boosted ? 0 : ticket.returnValue) + failsafe.returnValue
-    );
-  });
-
-  const outcomes = [...openingReturns, ...extraMissReturns];
-  if (outcomes.length === 0) {
-    return { lowest: 0, highest: 0 };
-  }
-
-  return {
-    lowest: Math.min(...outcomes),
-    highest: Math.max(...outcomes),
-  };
-}
-
 export function createNineAnchorOdds(
   anchorA: FormattedGame,
   anchorB: FormattedGame

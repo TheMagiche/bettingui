@@ -14,7 +14,6 @@ import {
   gameTitle,
   MARKET_KEYS,
   needsCoverBoost,
-  returnRange,
   todayDateKey,
 } from "@/utils/bettingLogic";
 import type {
@@ -311,22 +310,24 @@ export default function Home() {
 
   const failsafeTickets = useMemo<FailsafeTicket[]>(
     () =>
-      extraLegs.flatMap((leg) =>
-        failsafeMarketsFor(leg.market).map((market) => {
-          const amount = Math.max(leg.failsafe[market], 0);
-          const odds = leg.game[market];
-          return {
-            id: `${leg.id}-${market}`,
-            legId: leg.id,
-            category: leg.category,
-            game: leg.game,
-            market,
-            amount,
-            odds,
-            returnValue: amount * odds,
-          };
-        })
-      ),
+      extraLegs
+        .flatMap((leg) =>
+          failsafeMarketsFor(leg.market).map((market) => {
+            const amount = Math.max(leg.failsafe[market], 0);
+            const odds = leg.game[market];
+            return {
+              id: `${leg.id}-${market}`,
+              legId: leg.id,
+              category: leg.category,
+              game: leg.game,
+              market,
+              amount,
+              odds,
+              returnValue: amount * odds,
+            };
+          })
+        )
+        .sort((a, b) => b.returnValue - a.returnValue),
     [extraLegs]
   );
 
@@ -344,17 +345,27 @@ export default function Home() {
 
   const workingSpread = spread + failsafeStake;
 
-  const { lowest: lowestReturn, highest: highestReturn } = useMemo(
-    () => returnRange(tickets, failsafeTickets),
-    [failsafeTickets, tickets]
+  const lowestReturn = useMemo(
+    () => (tickets.length ? Math.min(...tickets.map((ticket) => ticket.returnValue)) : 0),
+    [tickets]
+  );
+
+  const highestReturn = useMemo(
+    () => (tickets.length ? Math.max(...tickets.map((ticket) => ticket.returnValue)) : 0),
+    [tickets]
+  );
+
+  const sortedTickets = useMemo(
+    () => [...tickets].sort((a, b) => b.returnValue - a.returnValue),
+    [tickets]
   );
 
   const paginatedTickets = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return tickets.slice(start, start + itemsPerPage);
-  }, [currentPage, tickets]);
+    return sortedTickets.slice(start, start + itemsPerPage);
+  }, [currentPage, sortedTickets]);
 
-  const totalPages = Math.max(1, Math.ceil(tickets.length / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(sortedTickets.length / itemsPerPage));
 
   const updateCellAmount = (id: string, value: string) => {
     const parsedValue = Number(value);
