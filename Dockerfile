@@ -1,5 +1,4 @@
-# Match local Node 20. Next.js 16 requires 20.9+.
-ARG NODE_VERSION=20-bookworm-slim
+ARG NODE_VERSION=24-bookworm-slim
 
 FROM node:${NODE_VERSION} AS dependencies
 
