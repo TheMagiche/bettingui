@@ -411,7 +411,8 @@ export function failsafePayoutGroup(
   const lossFailsafe = payoutRange(lossReturns);
   const draws = leveragedEarnings(drawReturns, missOpenings, hasBoosted);
   const losses = leveragedEarnings(lossReturns, missOpenings, hasBoosted);
-  const combo = payoutRange([...draws.values, ...losses.values]);
+  const comboValues = [...draws.values, ...losses.values];
+  const combo = comboValues.length > 0 ? payoutRange(comboValues) : unboosted;
 
   return {
     boostedLow: boosted.low,
