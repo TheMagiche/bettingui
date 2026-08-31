@@ -12,8 +12,39 @@ const SPORTPESA_ENDPOINTS = [
   `https://www.ke.sportpesa.com/api/upcoming/games?type=prematch&sportId=1&section=upcoming&markets_layout=multiple&o=startTime&pag_count=${PAGE_SIZE}&pag_min=`,
   `https://www.ke.sportpesa.com/api/todays/1/games?type=prematch&section=today&markets_layout=multiple&o=startTime&pag_count=${PAGE_SIZE}&pag_min=`,
 ];
-const USER_AGENT =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const CHROME_VERSION = "143.0.0.0";
+
+function isServerless() {
+  return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+}
+
+function userAgent() {
+  if (process.env.CHROME_USER_AGENT) {
+    return process.env.CHROME_USER_AGENT;
+  }
+
+  if (isServerless() || process.platform === "linux") {
+    return `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_VERSION} Safari/537.36`;
+  }
+
+  if (process.platform === "win32") {
+    return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_VERSION} Safari/537.36`;
+  }
+
+  return `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_VERSION} Safari/537.36`;
+}
+
+function userAgentPlatform() {
+  if (isServerless() || process.platform === "linux") {
+    return "Linux x86_64";
+  }
+
+  if (process.platform === "win32") {
+    return "Win32";
+  }
+
+  return "MacIntel";
+}
 
 type SportpesaCompetitor = {
   name?: string;
@@ -40,7 +71,7 @@ type SportpesaEvent = {
   markets?: SportpesaMarket[];
 };
 
-function chromePath() {
+function localChromePath() {
   if (process.env.CHROME_PATH) {
     return process.env.CHROME_PATH;
   }
@@ -54,6 +85,34 @@ function chromePath() {
   }
 
   return "google-chrome";
+}
+
+function localChromeArgs() {
+  return [
+    "--headless=new",
+    "--disable-gpu",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--disable-dev-shm-usage",
+    "--disable-background-networking",
+    "--window-size=1920,1080",
+  ];
+}
+
+async function resolveBrowser() {
+  if (isServerless() && !process.env.CHROME_PATH) {
+    const { default: chromium } = await import("@sparticuz/chromium");
+    chromium.setGraphicsMode = false;
+    return {
+      executablePath: await chromium.executablePath(),
+      args: [...chromium.args, "--disable-dev-shm-usage", "--window-size=1920,1080"],
+    };
+  }
+
+  return {
+    executablePath: localChromePath(),
+    args: localChromeArgs(),
+  };
 }
 
 function sleep(ms: number) {
@@ -142,18 +201,15 @@ function mapEvent(event: SportpesaEvent): RawGame | null {
   };
 }
 
-function launchChrome(port: number, userDataDir: string): ChildProcess {
+async function launchChrome(port: number, userDataDir: string): Promise<ChildProcess> {
+  const browser = await resolveBrowser();
+  const agent = userAgent();
+
   return spawn(
-    chromePath(),
+    browser.executablePath,
     [
-      "--headless=new",
-      "--disable-gpu",
-      "--no-first-run",
-      "--no-default-browser-check",
-      "--disable-dev-shm-usage",
-      "--disable-background-networking",
-      "--window-size=1920,1080",
-      `--user-agent=${USER_AGENT}`,
+      ...browser.args,
+      `--user-agent=${agent}`,
       `--remote-debugging-port=${port}`,
       `--user-data-dir=${userDataDir}`,
     ],
@@ -247,15 +303,21 @@ const FETCH_GAMES_SCRIPT = `
 export async function scrapeSportpesaGames(): Promise<RawGame[]> {
   const port = 9300 + Math.floor(Math.random() * 700);
   const userDataDir = await mkdtemp(join(tmpdir(), "sportpesa-chrome-"));
-  const chrome = launchChrome(port, userDataDir);
+  const chrome = await launchChrome(port, userDataDir);
   let client: CDP.Client | undefined;
 
   try {
-    await waitForDebugger(port);
+    await waitForDebugger(port, isServerless() ? 20000 : 15000);
     client = await CDP({ host: "127.0.0.1", port });
-    const { Page, Runtime } = client;
+    const { Page, Runtime, Network } = client;
     await Page.enable();
     await Runtime.enable();
+    await Network.enable();
+    await Network.setUserAgentOverride({
+      userAgent: userAgent(),
+      acceptLanguage: "en-KE,en;q=0.9",
+      platform: userAgentPlatform(),
+    });
     await Page.navigate({ url: SPORTPESA_PAGE });
     await Page.loadEventFired();
 

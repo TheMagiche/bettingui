@@ -5,6 +5,7 @@ import type { RawGame } from "@/utils/bettingLogic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
