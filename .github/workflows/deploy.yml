@@ -3,7 +3,7 @@ name: Deploy to Linode
 # Required GitHub secrets:
 #   LINODE_HOST, LINODE_USER, LINODE_SSH_PRIVATE_KEY
 # Optional repository variable:
-#   LINODE_APP_PORT (defaults to 80)
+#   LINODE_APP_PORT (defaults to 80, or 8080 on loopback when host nginx owns 80)
 # Linode host needs Docker Engine with the Compose plugin, and the SSH user
 # must be able to run docker (root, or a user in the docker group).
 
@@ -72,7 +72,7 @@ jobs:
           host: ${{ secrets.LINODE_HOST }}
           username: ${{ secrets.LINODE_USER }}
           key: ${{ secrets.LINODE_SSH_PRIVATE_KEY }}
-          source: "docker-compose.yml,nginx/default.conf"
+          source: "docker-compose.yml,nginx/default.conf,nginx/host.conf"
           target: "bettingui"
           overwrite: true
 
@@ -83,11 +83,12 @@ jobs:
           GHCR_USER: ${{ github.actor }}
           BETTINGUI_IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           APP_PORT: ${{ vars.LINODE_APP_PORT || 80 }}
+          APP_BIND: 0.0.0.0
         with:
           host: ${{ secrets.LINODE_HOST }}
           username: ${{ secrets.LINODE_USER }}
           key: ${{ secrets.LINODE_SSH_PRIVATE_KEY }}
-          envs: GHCR_TOKEN,GHCR_USER,BETTINGUI_IMAGE,APP_PORT
+          envs: GHCR_TOKEN,GHCR_USER,BETTINGUI_IMAGE,APP_PORT,APP_BIND
           script_stop: true
           command_timeout: 15m
           script: |
@@ -98,6 +99,10 @@ jobs:
               mkdir -p nginx
               mv default.conf nginx/default.conf
             fi
+            if [ -f host.conf ] && [ ! -f nginx/host.conf ]; then
+              mkdir -p nginx
+              mv host.conf nginx/host.conf
+            fi
             if [ -d nginx/default.conf ]; then
               rm -rf nginx/default.conf
             fi
@@ -106,6 +111,65 @@ jobs:
               find . -maxdepth 3 -print
               exit 1
             fi
+
+            SUDO=""
+            if [ "$(id -u)" -ne 0 ]; then
+              SUDO="sudo"
+            fi
+
+            host_nginx_running() {
+              command -v nginx >/dev/null 2>&1 || return 1
+              if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet nginx; then
+                return 0
+              fi
+              pgrep -x nginx >/dev/null 2>&1
+            }
+
+            port80_busy() {
+              if command -v ss >/dev/null 2>&1; then
+                ss -ltn | grep -Eq ':80[[:space:]]'
+              elif command -v netstat >/dev/null 2>&1; then
+                netstat -ltn | grep -Eq ':80[[:space:]]'
+              else
+                return 1
+              fi
+            }
+
+            docker compose down --remove-orphans || true
+
+            if host_nginx_running || port80_busy; then
+              APP_BIND=127.0.0.1
+              if [ "$APP_PORT" = "80" ]; then
+                APP_PORT=8080
+              fi
+              echo "Port 80 is in use; publishing container nginx on ${APP_BIND}:${APP_PORT}"
+            fi
+            export APP_BIND APP_PORT
+
+            install_host_nginx_proxy() {
+              [ -f nginx/host.conf ] || return 1
+              tmp_host=$(mktemp)
+              sed "s/__APP_PORT__/${APP_PORT}/g" nginx/host.conf > "$tmp_host"
+              if [ -d /etc/nginx/sites-available ]; then
+                $SUDO cp "$tmp_host" /etc/nginx/sites-available/bettingui
+                $SUDO ln -sfn /etc/nginx/sites-available/bettingui /etc/nginx/sites-enabled/bettingui
+                $SUDO rm -f /etc/nginx/sites-enabled/default
+              elif [ -d /etc/nginx/conf.d ]; then
+                $SUDO cp "$tmp_host" /etc/nginx/conf.d/bettingui.conf
+              else
+                rm -f "$tmp_host"
+                echo "Host nginx is running but no sites-available or conf.d directory was found"
+                return 1
+              fi
+              rm -f "$tmp_host"
+              $SUDO nginx -t
+              if command -v systemctl >/dev/null 2>&1; then
+                $SUDO systemctl reload nginx
+              else
+                $SUDO nginx -s reload
+              fi
+              echo "Host nginx now proxies port 80 to ${APP_BIND}:${APP_PORT}"
+            }
 
             DOCKER_CONFIG=$(mktemp -d)
             export DOCKER_CONFIG
@@ -120,12 +184,16 @@ jobs:
 
             docker image prune -f
 
+            if host_nginx_running; then
+              install_host_nginx_proxy
+            fi
+
             i=0
             while [ "$i" -lt 40 ]; do
               i=$((i + 1))
               if docker exec bettingui-nginx wget -q -O /dev/null -T 5 http://127.0.0.1/nginx-health \
                 && docker exec bettingui-nginx wget -q -O /dev/null -T 5 http://127.0.0.1/; then
-                echo "bettingui is up behind nginx"
+                echo "bettingui is up behind nginx on ${APP_BIND}:${APP_PORT}"
                 exit 0
               fi
               sleep 3
