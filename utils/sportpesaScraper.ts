@@ -88,7 +88,7 @@ function localChromePath() {
 }
 
 function localChromeArgs() {
-  return [
+  const args = [
     "--headless=new",
     "--disable-gpu",
     "--no-first-run",
@@ -97,6 +97,12 @@ function localChromeArgs() {
     "--disable-background-networking",
     "--window-size=1920,1080",
   ];
+
+  if (process.env.CHROME_NO_SANDBOX === "1") {
+    args.push("--no-sandbox", "--disable-setuid-sandbox");
+  }
+
+  return args;
 }
 
 async function resolveBrowser() {
@@ -206,7 +212,7 @@ async function launchChrome(port: number, userDataDir: string): Promise<ChildPro
   const agent = userAgent();
 
   return spawn(
-    browser.executablePath,
+    /* turbopackIgnore: true */ browser.executablePath,
     [
       ...browser.args,
       `--user-agent=${agent}`,

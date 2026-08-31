@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    image: bettingui:local
+    container_name: bettingui
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    restart: unless-stopped
+    shm_size: "1gb"
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      CHROME_PATH: /usr/bin/chromium
+      CHROME_NO_SANDBOX: "1"

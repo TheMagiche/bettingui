@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.github
+.vercel
+.qodo
+.env*
+*.md
+AGENTS.md
+CLAUDE.md
+docs
+utils/sportspesaScrapper.py
+tsconfig.tsbuildinfo
+vercel.json
+Dockerfile
+docker-compose.yml
+.dockerignore
