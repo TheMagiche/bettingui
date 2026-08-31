@@ -14,6 +14,15 @@ export type FormattedGame = {
   originalData: RawGame;
 };
 
+export type MarketKey = "w" | "d" | "l";
+
+export type AnchorCombo = {
+  id: string;
+  row: MarketKey;
+  col: MarketKey;
+  odds: number;
+};
+
 export function formatAndIdentifyGames(rawJsonData: RawGame[]) {
   const formattedGames = rawJsonData.map((game) => {
     const hw = parseFloat(String(game.home_win));
@@ -61,4 +70,24 @@ export function identifyGames(games: FormattedGame[]) {
     }
   }
   return { anchors, hedges, unicorns };
+}
+
+export const MARKET_KEYS: MarketKey[] = ["w", "d", "l"];
+
+export function createNineAnchorOdds(
+  anchorA: FormattedGame,
+  anchorB: FormattedGame
+): AnchorCombo[] {
+  return MARKET_KEYS.flatMap((row) =>
+    MARKET_KEYS.map((col) => ({
+      id: `${row}-${col}`,
+      row,
+      col,
+      odds: anchorA[row] * anchorB[col],
+    }))
+  );
+}
+
+export function gameTitle(game: FormattedGame) {
+  return `${game.originalData.home_team} vs ${game.originalData.away_team}`;
 }
