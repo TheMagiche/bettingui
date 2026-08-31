@@ -36,12 +36,24 @@ import type {
 } from "@/utils/bettingLogic";
 import DateFilterChips from "@/app/components/DateFilterChips";
 import GameSelectModal from "@/app/components/GameSelectModal";
-import { ChevronLeft, ChevronRight, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+} from "lucide-react";
 
 type ExtraCategory = "hedges" | "unicorns" | "others";
 type GamesSource = "live" | "fallback" | "loading";
 type ExtraPairSlot = "a" | "b";
-type PickerTarget = "anchorA" | "anchorB" | "extraAnchor" | ExtraCategory | "individual";
+type PickerTarget =
+  | "anchorA"
+  | "anchorB"
+  | "extraAnchor"
+  | ExtraCategory
+  | "individual";
 
 type ExtraPairIds = {
   aId: string;
@@ -115,7 +127,9 @@ function SlipLeg({
     <div>
       <div className="text-sm font-semibold leading-tight text-zinc-900 dark:text-zinc-50">
         {gameTitle(game)}{" "}
-        <span className="font-medium text-zinc-500 dark:text-zinc-400">({label})</span>
+        <span className="font-medium text-zinc-500 dark:text-zinc-400">
+          ({label})
+        </span>
       </div>
       <div className="text-xs text-zinc-500 dark:text-zinc-400">
         {MARKET_TITLES[market]} {game[market].toFixed(2)}
@@ -124,16 +138,28 @@ function SlipLeg({
   );
 }
 
-function SlipPayout({ stake, odds, toWin }: { stake: number; odds: number; toWin: number }) {
+function SlipPayout({
+  stake,
+  odds,
+  toWin,
+}: {
+  stake: number;
+  odds: number;
+  toWin: number;
+}) {
   return (
     <div className="mt-2 space-y-1 text-xs">
       <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
         <span>Stake</span>
-        <span className="font-medium text-zinc-800 dark:text-zinc-200">${stake.toFixed(2)}</span>
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">
+          ${stake.toFixed(2)}
+        </span>
       </div>
       <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
         <span>Odds</span>
-        <span className="font-medium text-zinc-800 dark:text-zinc-200">{odds.toFixed(2)}</span>
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">
+          {odds.toFixed(2)}
+        </span>
       </div>
       <div className="flex items-center justify-between font-semibold text-emerald-600 dark:text-emerald-400">
         <span>Amount to win</span>
@@ -162,7 +188,7 @@ function sortGames(games: FormattedGame[]) {
     return `${a.originalData.home_team} ${a.originalData.away_team}`
       .toLowerCase()
       .localeCompare(
-        `${b.originalData.home_team} ${b.originalData.away_team}`.toLowerCase()
+        `${b.originalData.home_team} ${b.originalData.away_team}`.toLowerCase(),
       );
   });
 }
@@ -171,7 +197,11 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function completePairCount(baseAId: string, baseBId: string, extras: ExtraPairIds[]) {
+function completePairCount(
+  baseAId: string,
+  baseBId: string,
+  extras: ExtraPairIds[],
+) {
   let count = baseAId && baseBId && baseAId !== baseBId ? 1 : 0;
   for (const pair of extras) {
     if (pair.aId && pair.bId && pair.aId !== pair.bId) {
@@ -200,13 +230,15 @@ function scaleFailsafe(legs: ExtraLeg[], factor: number): ExtraLeg[] {
 }
 
 export default function Home() {
-  const [classified, setClassified] = useState<IdentifiedGames>(emptyIdentifiedGames);
+  const [classified, setClassified] =
+    useState<IdentifiedGames>(emptyIdentifiedGames);
   const [overrides, setOverrides] = useState<Record<string, GameBucket>>({});
   const [spread, setSpread] = useState<number>(90);
   const [anchorAId, setAnchorAId] = useState("");
   const [anchorBId, setAnchorBId] = useState("");
   const [extraPairs, setExtraPairs] = useState<ExtraPairIds[]>([]);
-  const [extraPairPicker, setExtraPairPicker] = useState<ExtraPairPicker | null>(null);
+  const [extraPairPicker, setExtraPairPicker] =
+    useState<ExtraPairPicker | null>(null);
   const [cellAmounts, setCellAmounts] = useState<Record<string, number>>({});
   const [extraLegs, setExtraLegs] = useState<ExtraLeg[]>([]);
   const [extraCategory, setExtraCategory] = useState<ExtraCategory>("hedges");
@@ -224,12 +256,17 @@ export default function Home() {
 
   const games = useMemo(
     () => applyGameOverrides(classified, overrides),
-    [classified, overrides]
+    [classified, overrides],
   );
 
   const allGames = useMemo(
-    () => [...games.anchors, ...games.hedges, ...games.unicorns, ...games.others],
-    [games]
+    () => [
+      ...games.anchors,
+      ...games.hedges,
+      ...games.unicorns,
+      ...games.others,
+    ],
+    [games],
   );
   const matchDates = useMemo(() => availableDateKeys(allGames), [allGames]);
   const visibleGames = useMemo(
@@ -239,7 +276,7 @@ export default function Home() {
       unicorns: filterGamesByDate(games.unicorns, dateFilter),
       others: filterGamesByDate(games.others, dateFilter),
     }),
-    [dateFilter, games]
+    [dateFilter, games],
   );
 
   useEffect(() => {
@@ -252,7 +289,7 @@ export default function Home() {
       setOverrides((current) => {
         const otherIds = new Set(formatted.others.map((game) => game.id));
         return Object.fromEntries(
-          Object.entries(current).filter(([id]) => otherIds.has(id))
+          Object.entries(current).filter(([id]) => otherIds.has(id)),
         );
       });
 
@@ -260,27 +297,31 @@ export default function Home() {
       setAnchorAId((current) =>
         current && sortedAnchors.some((game) => game.id === current)
           ? current
-          : ""
+          : "",
       );
       setAnchorBId((current) =>
         current && sortedAnchors.some((game) => game.id === current)
           ? current
-          : ""
+          : "",
       );
       setExtraPairs((current) =>
         current
           .map((pair) => ({
-            aId: sortedAnchors.some((game) => game.id === pair.aId) ? pair.aId : "",
-            bId: sortedAnchors.some((game) => game.id === pair.bId) ? pair.bId : "",
+            aId: sortedAnchors.some((game) => game.id === pair.aId)
+              ? pair.aId
+              : "",
+            bId: sortedAnchors.some((game) => game.id === pair.bId)
+              ? pair.bId
+              : "",
           }))
-          .filter((pair) => pair.aId || pair.bId)
+          .filter((pair) => pair.aId || pair.bId),
       );
 
       const sortedExtras = sortGames(formatted.hedges);
       setExtraGameId((current) =>
         current && sortedExtras.some((game) => game.id === current)
           ? current
-          : sortedExtras[0]?.id ?? ""
+          : (sortedExtras[0]?.id ?? ""),
       );
     };
 
@@ -294,7 +335,9 @@ export default function Home() {
       .then((data) => {
         if (!cancelled && !liveApplied) {
           applyGames(data);
-          setGamesSource((current) => (current === "live" ? current : "fallback"));
+          setGamesSource((current) =>
+            current === "live" ? current : "fallback",
+          );
         }
       })
       .catch((err) => console.error("Failed to load fallback matches", err));
@@ -304,10 +347,17 @@ export default function Home() {
         if (!res.ok) {
           throw new Error("Failed to load live matches");
         }
-        return res.json() as Promise<{ games: RawGame[]; source: "live" | "fallback" }>;
+        return res.json() as Promise<{
+          games: RawGame[];
+          source: "live" | "fallback";
+        }>;
       })
       .then((payload) => {
-        if (!cancelled && Array.isArray(payload.games) && payload.games.length > 0) {
+        if (
+          !cancelled &&
+          Array.isArray(payload.games) &&
+          payload.games.length > 0
+        ) {
           if (payload.source === "live") {
             liveApplied = true;
           }
@@ -319,7 +369,9 @@ export default function Home() {
 
     Promise.allSettled([loadFallback, loadLive]).then(() => {
       if (!cancelled) {
-        setGamesSource((current) => (current === "loading" ? "fallback" : current));
+        setGamesSource((current) =>
+          current === "loading" ? "fallback" : current,
+        );
         setIsRefreshing(false);
       }
     });
@@ -331,7 +383,7 @@ export default function Home() {
 
   const sortedAnchors = useMemo(
     () => sortGames(visibleGames.anchors),
-    [visibleGames.anchors]
+    [visibleGames.anchors],
   );
   const extraGames = useMemo(() => {
     if (extraCategory === "others") {
@@ -347,28 +399,31 @@ export default function Home() {
         ...visibleGames.unicorns,
         ...visibleGames.others,
       ]),
-    [visibleGames]
+    [visibleGames],
   );
 
   const selectedExtraGame = useMemo(
-    () => extraGames.find((game) => game.id === extraGameId) ?? extraGames[0] ?? null,
-    [extraGames, extraGameId]
+    () =>
+      extraGames.find((game) => game.id === extraGameId) ??
+      extraGames[0] ??
+      null,
+    [extraGames, extraGameId],
   );
   const selectedIndividualGame = useMemo(
     () =>
       visibleAllGames.find((game) => game.id === individualGameId) ??
       visibleAllGames[0] ??
       null,
-    [individualGameId, visibleAllGames]
+    [individualGameId, visibleAllGames],
   );
 
   const anchorA = useMemo(
     () => sortedAnchors.find((game) => game.id === anchorAId) ?? null,
-    [sortedAnchors, anchorAId]
+    [sortedAnchors, anchorAId],
   );
   const anchorB = useMemo(
     () => sortedAnchors.find((game) => game.id === anchorBId) ?? null,
-    [sortedAnchors, anchorBId]
+    [sortedAnchors, anchorBId],
   );
   const extraPairGames = useMemo(
     () =>
@@ -376,7 +431,7 @@ export default function Home() {
         a: sortedAnchors.find((game) => game.id === pair.aId) ?? null,
         b: sortedAnchors.find((game) => game.id === pair.bId) ?? null,
       })),
-    [extraPairs, sortedAnchors]
+    [extraPairs, sortedAnchors],
   );
   const resolvedPairs = useMemo<AnchorPair[]>(() => {
     const pairs: AnchorPair[] = [];
@@ -393,11 +448,11 @@ export default function Home() {
   const usedAnchorIds = useMemo(
     () =>
       [anchorAId, anchorBId, ...extraPairs.flatMap(pairIds)].filter(Boolean),
-    [anchorAId, anchorBId, extraPairs]
+    [anchorAId, anchorBId, extraPairs],
   );
   const availableExtraAnchors = useMemo(
     () => sortedAnchors.filter((game) => !usedAnchorIds.includes(game.id)),
-    [sortedAnchors, usedAnchorIds]
+    [sortedAnchors, usedAnchorIds],
   );
   const pairCount = resolvedPairs.length;
   const coverScale = coverScaleFor(pairCount);
@@ -408,18 +463,19 @@ export default function Home() {
 
   const combinations = useMemo(
     () => createPairedAnchorOdds(resolvedPairs),
-    [resolvedPairs]
+    [resolvedPairs],
   );
 
   const extraMultiplier = useMemo(
     () => extraLegs.reduce((product, leg) => product * leg.game[leg.market], 1),
-    [extraLegs]
+    [extraLegs],
   );
 
   const tickets = useMemo<OpeningTicket[]>(() => {
     return combinations.map((combo) => {
       const amount = Math.max(cellAmounts[combo.id] ?? equalStake, 0);
-      const boosted = extraLegs.length > 0 && needsCoverBoost(combo.odds, coverMultiplier);
+      const boosted =
+        extraLegs.length > 0 && needsCoverBoost(combo.odds, coverMultiplier);
       const odds = boosted ? combo.odds * extraMultiplier : combo.odds;
       return {
         ...combo,
@@ -456,33 +512,33 @@ export default function Home() {
               odds,
               returnValue: amount * odds,
             };
-          })
+          }),
         )
         .sort((a, b) => b.returnValue - a.returnValue),
-    [extraLegs]
+    [extraLegs],
   );
 
   const failsafeStake = useMemo(
     () => failsafeTickets.reduce((sum, ticket) => sum + ticket.amount, 0),
-    [failsafeTickets]
+    [failsafeTickets],
   );
 
   const individualTickets = useMemo(
     () =>
       individualBets.map((bet) =>
-        createIndividualBet(bet.game, bet.market, bet.amount, bet.id)
+        createIndividualBet(bet.game, bet.market, bet.amount, bet.id),
       ),
-    [individualBets]
+    [individualBets],
   );
 
   const individualStake = useMemo(
     () => individualBetStake(individualTickets),
-    [individualTickets]
+    [individualTickets],
   );
 
   const openingStake = useMemo(
     () => tickets.reduce((sum, ticket) => sum + ticket.amount, 0),
-    [tickets]
+    [tickets],
   );
 
   const totalStake = openingStake + failsafeStake + individualStake;
@@ -491,20 +547,20 @@ export default function Home() {
 
   const payoutGroup = useMemo(
     () => failsafePayoutGroup(tickets, failsafeTickets),
-    [failsafeTickets, tickets]
+    [failsafeTickets, tickets],
   );
 
   const openingRange = useMemo(() => openingReturnRange(tickets), [tickets]);
   const individualReturn = useMemo(
     () => individualBetReturn(individualTickets),
-    [individualTickets]
+    [individualTickets],
   );
   const lowestReturn = openingRange.low;
   const highestReturn = openingRange.high + individualReturn;
 
   const sortedTickets = useMemo(
     () => [...tickets].sort((a, b) => b.returnValue - a.returnValue),
-    [tickets]
+    [tickets],
   );
 
   const paginatedTickets = useMemo(() => {
@@ -512,7 +568,10 @@ export default function Home() {
     return sortedTickets.slice(start, start + itemsPerPage);
   }, [currentPage, sortedTickets]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedTickets.length / itemsPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedTickets.length / itemsPerPage),
+  );
 
   const updateCellAmount = (id: string, value: string) => {
     const parsedValue = Number(value);
@@ -541,7 +600,10 @@ export default function Home() {
     ]);
   };
 
-  const addIndividualBet = (game = selectedIndividualGame, market: MarketKey = "w") => {
+  const addIndividualBet = (
+    game = selectedIndividualGame,
+    market: MarketKey = "w",
+  ) => {
     if (!game) {
       return;
     }
@@ -550,7 +612,7 @@ export default function Home() {
       game,
       market,
       INDIVIDUAL_DEFAULT_STAKE,
-      `individual-${game.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`
+      `individual-${game.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     );
     setIndividualBets((prev) => [...prev, bet]);
   };
@@ -558,18 +620,24 @@ export default function Home() {
   const updateIndividualMarket = (id: string, market: MarketKey) => {
     setIndividualBets((prev) =>
       prev.map((bet) =>
-        bet.id === id ? createIndividualBet(bet.game, market, bet.amount, bet.id) : bet
-      )
+        bet.id === id
+          ? createIndividualBet(bet.game, market, bet.amount, bet.id)
+          : bet,
+      ),
     );
   };
 
   const updateIndividualAmount = (id: string, value: string) => {
     const parsedValue = Number(value);
-    const nextAmount = Number.isFinite(parsedValue) ? Math.max(parsedValue, 0) : 0;
+    const nextAmount = Number.isFinite(parsedValue)
+      ? Math.max(parsedValue, 0)
+      : 0;
     setIndividualBets((prev) =>
       prev.map((bet) =>
-        bet.id === id ? createIndividualBet(bet.game, bet.market, nextAmount, bet.id) : bet
-      )
+        bet.id === id
+          ? createIndividualBet(bet.game, bet.market, nextAmount, bet.id)
+          : bet,
+      ),
     );
   };
 
@@ -597,7 +665,11 @@ export default function Home() {
     setExtraLegs((legs) => scaleFailsafe(legs, toCount / fromCount));
   };
 
-  const dropGameFromExtraPairs = (gameId: string, nextBaseAId: string, nextBaseBId: string) => {
+  const dropGameFromExtraPairs = (
+    gameId: string,
+    nextBaseAId: string,
+    nextBaseBId: string,
+  ) => {
     const nextExtras = extraPairs.map((pair) => ({
       aId: pair.aId === gameId ? "" : pair.aId,
       bId: pair.bId === gameId ? "" : pair.bId,
@@ -627,7 +699,7 @@ export default function Home() {
               ...pair,
               [extraPairPicker.slot === "a" ? "aId" : "bId"]: game.id,
             }
-          : pair
+          : pair,
       );
       const newCount = completePairCount(anchorAId, anchorBId, nextExtras);
       setExtraPairs(nextExtras);
@@ -664,7 +736,7 @@ export default function Home() {
 
   const updateExtraMarket = (id: string, market: MarketKey) => {
     setExtraLegs((prev) =>
-      prev.map((leg) => (leg.id === id ? { ...leg, market } : leg))
+      prev.map((leg) => (leg.id === id ? { ...leg, market } : leg)),
     );
   };
 
@@ -672,15 +744,21 @@ export default function Home() {
     setExtraLegs((prev) => prev.filter((leg) => leg.id !== id));
   };
 
-  const updateFailsafeAmount = (id: string, market: "d" | "l", value: string) => {
+  const updateFailsafeAmount = (
+    id: string,
+    market: "d" | "l",
+    value: string,
+  ) => {
     const parsedValue = Number(value);
-    const nextAmount = Number.isFinite(parsedValue) ? Math.max(parsedValue, 0) : 0;
+    const nextAmount = Number.isFinite(parsedValue)
+      ? Math.max(parsedValue, 0)
+      : 0;
     setExtraLegs((prev) =>
       prev.map((leg) =>
         leg.id === id
           ? { ...leg, failsafe: { ...leg.failsafe, [market]: nextAmount } }
-          : leg
-      )
+          : leg,
+      ),
     );
   };
 
@@ -794,7 +872,15 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
+                <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                  Total Final Stake
+                </div>
+                <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                  ${totalStake.toFixed(2)}
+                </div>
+              </div>
               <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
                 <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
                   Lowest return
@@ -858,7 +944,11 @@ export default function Home() {
                   Anchor 1
                 </span>
                 <PickerButton
-                  label={anchorA ? gameTitle(anchorA) : "Search and choose first anchor"}
+                  label={
+                    anchorA
+                      ? gameTitle(anchorA)
+                      : "Search and choose first anchor"
+                  }
                   detail={
                     anchorA
                       ? oddsDetail(anchorA)
@@ -872,7 +962,11 @@ export default function Home() {
                   Anchor 2
                 </span>
                 <PickerButton
-                  label={anchorB ? gameTitle(anchorB) : "Search and choose second anchor"}
+                  label={
+                    anchorB
+                      ? gameTitle(anchorB)
+                      : "Search and choose second anchor"
+                  }
                   detail={
                     anchorB
                       ? oddsDetail(anchorB)
@@ -964,9 +1058,9 @@ export default function Home() {
                       {tickets.length} opening odds
                     </h3>
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                      {pairCount} pair{pairCount === 1 ? "" : "s"} · {COVER_MULTIPLIER}{" "}
-                      tickets each · {coverMultiplier}× cover. Hedges and unicorns
-                      apply to every pair.
+                      {pairCount} pair{pairCount === 1 ? "" : "s"} ·{" "}
+                      {COVER_MULTIPLIER} tickets each · {coverMultiplier}×
+                      cover. Hedges and unicorns apply to every pair.
                     </p>
                   </div>
                   {extraLegs.length > 0 && (
@@ -1005,18 +1099,21 @@ export default function Home() {
               </div>
             ) : (
               <div className="mt-6 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
-                Choose two different anchors to create the opening odds. Add another
-                pair to book a second 3×3 that shares the same hedges and unicorns.
+                Choose two different anchors to create the opening odds. Add
+                another pair to book a second 3×3 that shares the same hedges
+                and unicorns.
               </div>
             )}
 
             <div className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-              <h3 className="text-lg font-bold">Add a hedge, unicorn, or other</h3>
+              <h3 className="text-lg font-bold">
+                Add a hedge, unicorn, or other
+              </h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Extra legs apply only when an opening ticket is below {coverMultiplier}×,
-                so its return would be less than that pair&apos;s spread. The same
-                hedges and unicorns attach to every pair. Others are matches
-                the auto-rules did not classify.
+                Extra legs apply only when an opening ticket is below{" "}
+                {coverMultiplier}×, so its return would be less than that
+                pair&apos;s spread. The same hedges and unicorns attach to every
+                pair. Others are matches the auto-rules did not classify.
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1068,8 +1165,9 @@ export default function Home() {
 
               {extraCategory === "others" ? (
                 <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
-                  Classify an unclassified match as an anchor, hedge, or unicorn.
-                  Hedges and unicorns stay selected here so you can add them next.
+                  Classify an unclassified match as an anchor, hedge, or
+                  unicorn. Hedges and unicorns stay selected here so you can add
+                  them next.
                 </p>
               ) : (
                 <button
@@ -1123,7 +1221,10 @@ export default function Home() {
                       </div>
                       <div className="mt-2 grid grid-cols-3 gap-2">
                         {MARKET_KEYS.map((key) => (
-                          <div key={`${leg.id}-${key}-value`} className="bet-multiplier-value">
+                          <div
+                            key={`${leg.id}-${key}-value`}
+                            className="bet-multiplier-value"
+                          >
                             {leg.game[key].toFixed(2)}
                           </div>
                         ))}
@@ -1213,7 +1314,10 @@ export default function Home() {
                       </div>
                       <div className="mt-2 grid grid-cols-3 gap-2">
                         {MARKET_KEYS.map((key) => (
-                          <div key={`${bet.id}-${key}-value`} className="bet-multiplier-value">
+                          <div
+                            key={`${bet.id}-${key}-value`}
+                            className="bet-multiplier-value"
+                          >
                             {bet.game[key].toFixed(2)}
                           </div>
                         ))}
@@ -1250,7 +1354,9 @@ export default function Home() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold">Betslip</h2>
               <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                {tickets.length + failsafeTickets.length + individualTickets.length}
+                {tickets.length +
+                  failsafeTickets.length +
+                  individualTickets.length}
               </span>
             </div>
 
@@ -1313,7 +1419,9 @@ export default function Home() {
             {tickets.length > itemsPerPage && (
               <div className="mt-4 flex items-center justify-center gap-2">
                 <button
-                  onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(page - 1, 1))
+                  }
                   disabled={currentPage === 1}
                   className="rounded p-1 hover:bg-zinc-200 disabled:opacity-50 dark:hover:bg-zinc-800"
                 >
@@ -1323,7 +1431,9 @@ export default function Home() {
                   Page {currentPage} of {totalPages}
                 </span>
                 <button
-                  onClick={() => setCurrentPage((page) => Math.min(page + 1, totalPages))}
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(page + 1, totalPages))
+                  }
                   disabled={currentPage === totalPages}
                   className="rounded p-1 hover:bg-zinc-200 disabled:opacity-50 dark:hover:bg-zinc-800"
                 >
@@ -1412,10 +1522,14 @@ export default function Home() {
                 </div>
                 <h2 className="mt-1 text-2xl font-bold">Draw and loss cover</h2>
                 <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  If a hedge or unicorn misses, boosted tickets pay nothing. Either
-                  draw or loss still hits, and that failsafe is a given in the payout
-                  group.                   Each side starts at ${failsafeDefault.toFixed(2)}
-                  {coverScale > 1 ? ` (${coverScale}× for ${coverScale} pairs)` : ""}.
+                  If a hedge or unicorn misses, boosted tickets pay nothing.
+                  Either draw or loss still hits, and that failsafe is a given
+                  in the payout group. Each side starts at $
+                  {failsafeDefault.toFixed(2)}
+                  {coverScale > 1
+                    ? ` (${coverScale}× for ${coverScale} pairs)`
+                    : ""}
+                  .
                 </p>
               </div>
               <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
@@ -1445,8 +1559,8 @@ export default function Home() {
                       </p>
                     ) : null}
                     <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                      Extra leg uses {MARKET_TITLES[leg.market]}. Cover the remaining
-                      outcomes below.
+                      Extra leg uses {MARKET_TITLES[leg.market]}. Cover the
+                      remaining outcomes below.
                     </p>
 
                     <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1476,7 +1590,11 @@ export default function Home() {
                                 step="0.01"
                                 value={amount}
                                 onChange={(event) =>
-                                  updateFailsafeAmount(leg.id, market, event.target.value)
+                                  updateFailsafeAmount(
+                                    leg.id,
+                                    market,
+                                    event.target.value,
+                                  )
                                 }
                                 className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
                               />
@@ -1509,8 +1627,12 @@ export default function Home() {
               </div>
               <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 Opening ${openingStake.toFixed(2)}
-                {failsafeStake > 0 ? ` + failsafe $${failsafeStake.toFixed(2)}` : ""}
-                {individualStake > 0 ? ` + individual $${individualStake.toFixed(2)}` : ""}
+                {failsafeStake > 0
+                  ? ` + failsafe $${failsafeStake.toFixed(2)}`
+                  : ""}
+                {individualStake > 0
+                  ? ` + individual $${individualStake.toFixed(2)}`
+                  : ""}
               </div>
             </div>
 
@@ -1525,7 +1647,8 @@ export default function Home() {
                 <PayoutScenario
                   title="Unboosted wins"
                   detail={
-                    payoutGroup.unboostedHigh === 0 && payoutGroup.unboostedLow === 0
+                    payoutGroup.unboostedHigh === 0 &&
+                    payoutGroup.unboostedLow === 0
                       ? "No unboosted tickets"
                       : `${coverMultiplier}× cover tickets`
                   }
@@ -1546,9 +1669,9 @@ export default function Home() {
                 />
                 <PayoutScenario
                   title="Combo wins"
-                  detail="Failsafe floor, up to boosted wins"
+                  detail="Total win range including individual"
                   low={payoutGroup.comboLow}
-                  high={payoutGroup.comboHigh}
+                  high={payoutGroup.comboHigh + individualReturn}
                 />
               </>
             ) : (
@@ -1556,7 +1679,9 @@ export default function Home() {
                 <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
                   Total payout group
                 </div>
-                <div className="text-xl font-bold text-zinc-400 dark:text-zinc-500">—</div>
+                <div className="text-xl font-bold text-zinc-400 dark:text-zinc-500">
+                  —
+                </div>
               </div>
             )}
           </div>
@@ -1576,11 +1701,11 @@ export default function Home() {
                       extraPairPicker.slot === "a" ? "first" : "second"
                     } anchor`
                   : "Choose an extra pair anchor"
-              : picker === "individual"
-                ? "Choose an individual bet"
-                : picker === "others"
-                  ? "Unclassified matches"
-                  : `Choose a ${picker ? EXTRA_TITLES[picker].slice(0, -1).toLowerCase() : "match"}`
+                : picker === "individual"
+                  ? "Choose an individual bet"
+                  : picker === "others"
+                    ? "Unclassified matches"
+                    : `Choose a ${picker ? EXTRA_TITLES[picker].slice(0, -1).toLowerCase() : "match"}`
         }
         description={
           picker === "others"
@@ -1599,7 +1724,9 @@ export default function Home() {
                       extraPairs[extraPairPicker.index]?.[
                         extraPairPicker.slot === "a" ? "aId" : "bId"
                       ];
-                    return game.id === currentId || !usedAnchorIds.includes(game.id);
+                    return (
+                      game.id === currentId || !usedAnchorIds.includes(game.id)
+                    );
                   })
                 : availableExtraAnchors
               : picker === "individual"
@@ -1687,7 +1814,7 @@ function CoverMatrix({
       (item) =>
         item.pairIndex === pairIndex &&
         item.markets[0] === row &&
-        item.markets[1] === col
+        item.markets[1] === col,
     );
 
   const oddsBreakdown = (ticket: OpeningTicket) => {
@@ -1740,7 +1867,9 @@ function CoverMatrix({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                      {ticket.markets.map((market) => market.toUpperCase()).join(" × ")}
+                      {ticket.markets
+                        .map((market) => market.toUpperCase())
+                        .join(" × ")}
                     </div>
                     {ticket.boosted ? (
                       <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
@@ -1810,8 +1939,12 @@ function PayoutScenario({
       <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
         {title}
       </div>
-      <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{range}</div>
-      <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{detail}</div>
+      <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+        {range}
+      </div>
+      <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        {detail}
+      </div>
     </div>
   );
 }
