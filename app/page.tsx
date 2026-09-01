@@ -256,7 +256,9 @@ function extraLegTargetLabel(target: ExtraLegTarget, pairs: AnchorPair[]) {
     (pair) => pair.a.id === target.aId && pair.b.id === target.bId,
   );
   const pair = pairIndex >= 0 ? pairs[pairIndex] : null;
-  const markets = target.markets.map((market) => market.toUpperCase()).join(" × ");
+  const markets = target.markets
+    .map((market) => market.toUpperCase())
+    .join(" × ");
   if (!pair) {
     return markets;
   }
@@ -293,9 +295,8 @@ function scaleFailsafe(legs: ExtraLeg[], factor: number): ExtraLeg[] {
 }
 
 export default function Home() {
-  const [fetchedClassified, setFetchedClassified] = useState(
-    emptyIdentifiedGames,
-  );
+  const [fetchedClassified, setFetchedClassified] =
+    useState(emptyIdentifiedGames);
   const [manualGames, setManualGames] = useState<FormattedGame[]>([]);
   const [overrides, setOverrides] = useState<Record<string, GameBucket>>({});
   const [spread, setSpread] = useState<number>(90);
@@ -822,6 +823,7 @@ export default function Home() {
       ? formatGame(raw, `${formatted.id} · ${Date.now().toString(16)}`)
       : formatted;
     setManualGames((current) => [...current, unique]);
+    return unique;
   };
 
   const refreshGames = async () => {
@@ -864,7 +866,9 @@ export default function Home() {
     } catch (error) {
       setGamesSource("error");
       setLoadError(
-        error instanceof Error ? error.message : "Failed to load SportPesa matches",
+        error instanceof Error
+          ? error.message
+          : "Failed to load SportPesa matches",
       );
     } finally {
       setIsRefreshing(false);
@@ -1004,7 +1008,7 @@ export default function Home() {
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                   Bet Builder
                 </div>
-                <h2 className="mt-1 text-2xl font-bold">Unified cover</h2>
+                <h2 className="mt-1 text-2xl font-bold">Single & Multibet Builder</h2>
               </div>
               <button
                 onClick={clearBuilder}
@@ -1050,9 +1054,8 @@ export default function Home() {
                       ? oddsDetail(anchorA)
                       : visibleAllGames.length
                         ? `${visibleAllGames.length} matches available`
-                        : "No matches available"
+                        : "Add a match to get started"
                   }
-                  disabled={!visibleAllGames.length}
                   onClick={() => setPicker("anchorA")}
                 />
               </div>
@@ -1071,9 +1074,8 @@ export default function Home() {
                       ? oddsDetail(anchorB)
                       : visibleAllGames.length
                         ? `${visibleAllGames.length} matches available`
-                        : "No matches available"
+                        : "Add a match to get started"
                   }
-                  disabled={!visibleAllGames.length}
                   onClick={() => setPicker("anchorB")}
                 />
               </div>
@@ -1116,10 +1118,9 @@ export default function Home() {
                               ? oddsDetail(games.a)
                               : visibleAllGames.length
                                 ? `${availableExtraAnchors.length} matches available`
-                                : "No matches available"
+                                : "Add a match to get started"
                           }
                           onClick={() => openExtraPairPicker(index, "a")}
-                          disabled={!visibleAllGames.length}
                         />
                       </div>
                       <div>
@@ -1137,10 +1138,9 @@ export default function Home() {
                               ? oddsDetail(games.b)
                               : visibleAllGames.length
                                 ? `${availableExtraAnchors.length} matches available`
-                                : "No matches available"
+                                : "Add a match to get started"
                           }
                           onClick={() => openExtraPairPicker(index, "b")}
-                          disabled={!visibleAllGames.length}
                         />
                       </div>
                     </div>
@@ -1274,9 +1274,8 @@ export default function Home() {
                           ? oddsDetail(selectedExtraGame)
                           : extraGames.length
                             ? `${extraGames.length} matches available`
-                            : "No matches available"
+                            : "Add a match to get started"
                     }
-                    disabled={!extraGames.length}
                     onClick={() => setPicker(extraCategory)}
                   />
                 </div>
@@ -1384,9 +1383,8 @@ export default function Home() {
                       ? oddsDetail(selectedIndividualGame)
                       : visibleAllGames.length
                         ? `${visibleAllGames.length} matches available`
-                        : "No matches available"
+                        : "Add a match to get started"
                   }
-                  disabled={!visibleAllGames.length}
                   onClick={() => setPicker("individual")}
                 />
               </div>
@@ -1518,17 +1516,17 @@ export default function Home() {
                         market={ticket.markets[1]}
                       />
                       {ticket.extraLegs.map((leg) => (
-                          <SlipLeg
-                            key={`${ticket.id}-${leg.id}`}
-                            label={
-                              leg.target
-                                ? `${EXTRA_TITLES[leg.category].slice(0, -1)} cell`
-                                : EXTRA_TITLES[leg.category].slice(0, -1)
-                            }
-                            game={leg.game}
-                            market={leg.market}
-                          />
-                        ))}
+                        <SlipLeg
+                          key={`${ticket.id}-${leg.id}`}
+                          label={
+                            leg.target
+                              ? `${EXTRA_TITLES[leg.category].slice(0, -1)} cell`
+                              : EXTRA_TITLES[leg.category].slice(0, -1)
+                          }
+                          game={leg.game}
+                          market={leg.market}
+                        />
+                      ))}
                     </div>
                   )}
 
@@ -1846,9 +1844,9 @@ export default function Home() {
                               .toLowerCase()
                           : "extra"
                       } to this cell`
-                  : picker === "others"
-                    ? "Unclassified matches"
-                    : `Choose a ${picker ? EXTRA_TITLES[picker].slice(0, -1).toLowerCase() : "match"}`
+                    : picker === "others"
+                      ? "Unclassified matches"
+                      : `Choose a ${picker ? EXTRA_TITLES[picker].slice(0, -1).toLowerCase() : "match"}`
         }
         description={
           picker === "others"
@@ -1860,7 +1858,7 @@ export default function Home() {
                     cellExtraPicker,
                     resolvedPairs,
                   )}.`
-              : "Every match is listed. Search by team name and review the 1X2 and strategy odds before selecting."
+                : "Every match is listed. Search by team name and review the 1X2 and strategy odds before selecting."
         }
         buckets={visibleGames}
         initialBucket={picker === "others" ? "others" : "all"}
@@ -1880,7 +1878,7 @@ export default function Home() {
                   ? individualGameId
                   : picker === "cellExtra"
                     ? undefined
-                  : extraGameId
+                    : extraGameId
         }
         disabledIds={
           picker === "anchorA"
@@ -1906,7 +1904,7 @@ export default function Home() {
                           extraTargetEquals(leg.target, cellExtraPicker),
                       )
                       .map((leg) => leg.game.id)
-                : []
+                  : []
         }
         emptyLabel={
           picker === "others"
@@ -1978,7 +1976,9 @@ function CoverMatrix({
               {MARKET_TITLES[key]}
             </div>
             <div className="mt-1 truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
-              {anchorB.originalData.home_team}
+              <span>{anchorB.originalData.home_team}</span>
+              <br />
+              <span>{anchorB.originalData.away_team}</span>
             </div>
           </div>
         ))}
@@ -1990,7 +1990,9 @@ function CoverMatrix({
                 {MARKET_TITLES[row]}
               </div>
               <div className="mt-1 truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                {anchorA.originalData.home_team}
+                <span>{anchorA.originalData.home_team}</span>
+                <br />
+                <span>{anchorA.originalData.away_team}</span>
               </div>
             </div>
 
