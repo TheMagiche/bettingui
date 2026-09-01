@@ -1,8 +1,14 @@
+# Coolify: domain https://bettingui.work.gd → service app port 3000
+# Do not publish 80/443. Do not run a sidecar nginx.
+#
+# Local: docker compose up --build
+# Coolify: set BETTINGUI_IMAGE to the GHCR tag GitHub Actions pushes so the
+# VPS pulls instead of compiling Chromium + Next.js on the box.
+
 services:
   app:
     build: .
-    image: ${BETTINGUI_IMAGE:-bettingui:local}
-    container_name: bettingui
+    image: ${BETTINGUI_IMAGE:-ghcr.io/themagiche/bettingui:latest}
     restart: unless-stopped
     shm_size: "1gb"
     expose:
@@ -13,29 +19,15 @@ services:
       PORT: "3000"
       CHROME_PATH: /usr/bin/chromium
       CHROME_NO_SANDBOX: "1"
-    networks:
-      - bettingui
-
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: bettingui-nginx
-    restart: unless-stopped
-    ports:
-      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-3000}:80"
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      app:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "-T", "3", "http://127.0.0.1/nginx-health"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 5s
-    networks:
-      - bettingui
-
-networks:
-  bettingui:
-    driver: bridge
+      retries: 6
+      start_period: 40s
