@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Betting UI — Football Betting Strategy Analyzer
 
-## Getting Started
+A [Next.js](https://nextjs.org) (App Router) web application that implements a football betting risk-mitigation strategy. It ingests football match odds, identifies specific betting structures (**Anchors**, **Hedges**, **Unicorns**), and displays an interactive 3x3 matrix and a paginated betslip viewer that distribute a user-defined monetary spread across the identified bets.
 
-First, run the development server:
+## How it works
+
+1. **Data ingestion** — the app loads football matches with 1X2 odds (`home_win`, `draw`, `away_win`) from a live SportPesa scrape, with a static fallback file at `public/betgames.json`.
+2. **Classification** — each game is parsed and categorized by `utils/bettingLogic.ts`:
+   - **Anchors**: `w`, `d`, and `l` odds all between 2.1 and 3.9
+   - **Unicorns**: `d >= 5 * w` and `l >= 1.5 * d`
+   - **Hedges**: `d >= 3 * w` and `l >= 1.5 * d`
+3. **Stake distribution** — you pick Anchor games and extra legs (Hedges/Unicorns), set a monetary spread, and the UI builds paired anchor combos plus individual bets, showing stake and payout for each ticket in a paginated betslip viewer.
+
+## Tech stack
+
+- **Framework:** Next.js (React 19, App Router)
+- **Styling:** Tailwind CSS
+- **Icons:** lucide-react
+- **State:** React hooks (`useState`, `useMemo`, `useEffect`)
+- **Scraping:** headless Chromium (`@sparticuz/chromium` + `chrome-remote-interface`) for live SportPesa odds
+
+## Getting started
+
+Install dependencies and run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The app runs on **port 3000** and is deployed to a VPS via **Coolify**:
 
-## Learn More
+1. GitHub Actions builds a Docker image and pushes it to GHCR (`docker/build-push-action`).
+2. Actions then triggers the Coolify deploy webhook for this app.
+3. Coolify pulls the image and routes `https://betcalc.work.gd` → container port 3000 behind its own Traefik/Caddy proxy (no host nginx; 80/443 belong to the Coolify proxy).
 
-To learn more about Next.js, take a look at the following resources:
+Required GitHub secrets: `COOLIFY_WEBHOOK` (this resource's deploy webhook) and optionally `COOLIFY_TOKEN` if the webhook requires a Bearer token.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [`docs/agents/COOLIFY_BETTINGUI.md`](docs/agents/COOLIFY_BETTINGUI.md) for the full migration checklist (port ownership, compose layout, DNS, and rollback notes).

@@ -1395,7 +1395,7 @@ export default function Home() {
                 disabled={!selectedIndividualGame}
               >
                 <Plus size={16} />
-                Add individual bet
+                Add individual bets
               </button>
 
               {individualTickets.length > 0 && (
