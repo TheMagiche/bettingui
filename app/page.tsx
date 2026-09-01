@@ -923,7 +923,7 @@ export default function Home() {
                   ? "Live SportPesa matches loaded"
                   : gamesSource === "error"
                     ? loadError || "Could not load SportPesa matches"
-                    : "Click Refresh to load SportPesa matches"}
+                    : "Click Refresh to load SportPesa.com matches"}
             </p>
           </div>
           <button
