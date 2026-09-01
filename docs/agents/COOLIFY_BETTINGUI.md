@@ -144,10 +144,10 @@ jobs:
         run: |
           set -eu
           if [ -n "${COOLIFY_TOKEN:-}" ]; then
-            curl --fail --request GET "$COOLIFY_WEBHOOK" \
+            curl --fail --show-error --request POST "$COOLIFY_WEBHOOK" \
               --header "Authorization: Bearer $COOLIFY_TOKEN"
           else
-            curl --fail --request GET "$COOLIFY_WEBHOOK"
+            curl --fail --show-error --request POST "$COOLIFY_WEBHOOK"
           fi
 ```
 
