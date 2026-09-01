@@ -48,28 +48,78 @@ export type IndividualBet = {
   returnValue: number;
 };
 
+export type GameClass = GameBucket | "others";
+
+export const emptyIdentifiedGames: IdentifiedGames = {
+  anchors: [],
+  hedges: [],
+  unicorns: [],
+  others: [],
+};
+
+export function formatGame(game: RawGame, id?: string): FormattedGame {
+  const hw = parseFloat(String(game.home_win));
+  const aw = parseFloat(String(game.away_win));
+  const draw = parseFloat(String(game.draw));
+
+  // The favorite is assigned to 'w', the underdog to 'l'
+  const isHomeFav = hw <= aw;
+  const w = isHomeFav ? hw : aw;
+  const l = isHomeFav ? aw : hw;
+  const favTag = isHomeFav ? "(Home Fav)" : "(Away Fav)";
+
+  return {
+    id: id ?? `${game.home_team} vs ${game.away_team} ${favTag}`,
+    w,
+    d: draw,
+    l,
+    originalData: game,
+  };
+}
+
 export function formatAndIdentifyGames(rawJsonData: RawGame[]) {
-  const formattedGames = rawJsonData.map((game) => {
-    const hw = parseFloat(String(game.home_win));
-    const aw = parseFloat(String(game.away_win));
-    const draw = parseFloat(String(game.draw));
+  return identifyGames(rawJsonData.map((game) => formatGame(game)));
+}
 
-    // The favorite is assigned to 'w', the underdog to 'l'
-    const isHomeFav = hw <= aw;
-    const w = isHomeFav ? hw : aw;
-    const l = isHomeFav ? aw : hw;
-    const favTag = isHomeFav ? "(Home Fav)" : "(Away Fav)";
+export function flattenIdentifiedGames(games: IdentifiedGames): FormattedGame[] {
+  return [
+    ...games.anchors,
+    ...games.hedges,
+    ...games.unicorns,
+    ...games.others,
+  ];
+}
 
-    return {
-      id: `${game.home_team} vs ${game.away_team} ${favTag}`,
-      w: w,
-      d: draw,
-      l: l,
-      originalData: game,
-    } as FormattedGame;
-  });
+export function mergeIdentifiedGames(
+  base: IdentifiedGames,
+  extra: IdentifiedGames
+): IdentifiedGames {
+  const seen = new Set(flattenIdentifiedGames(base).map((game) => game.id));
+  const take = (list: FormattedGame[]) =>
+    list.filter((game) => !seen.has(game.id));
 
-  return identifyGames(formattedGames);
+  return {
+    anchors: [...base.anchors, ...take(extra.anchors)],
+    hedges: [...base.hedges, ...take(extra.hedges)],
+    unicorns: [...base.unicorns, ...take(extra.unicorns)],
+    others: [...base.others, ...take(extra.others)],
+  };
+}
+
+export function classForGame(
+  id: string,
+  games: IdentifiedGames
+): GameClass {
+  if (games.anchors.some((game) => game.id === id)) {
+    return "anchors";
+  }
+  if (games.hedges.some((game) => game.id === id)) {
+    return "hedges";
+  }
+  if (games.unicorns.some((game) => game.id === id)) {
+    return "unicorns";
+  }
+  return "others";
 }
 
 export function identifyGames(games: FormattedGame[]): IdentifiedGames {

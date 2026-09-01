@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   applyGameOverrides,
   availableDateKeys,
@@ -12,14 +12,19 @@ import {
   failsafeMarketsFor,
   failsafePayoutGroup,
   filterGamesByDate,
+  flattenIdentifiedGames,
   formatAndIdentifyGames,
+  formatGame,
   formatKickoff,
   gameKickoff,
   gameTitle,
+  identifyGames,
   INDIVIDUAL_DEFAULT_STAKE,
   individualBetReturn,
   individualBetStake,
   MARKET_KEYS,
+  emptyIdentifiedGames,
+  mergeIdentifiedGames,
   needsCoverBoost,
   openingReturnRange,
   todayDateKey,
@@ -29,7 +34,6 @@ import type {
   AnchorPair,
   FormattedGame,
   GameBucket,
-  IdentifiedGames,
   IndividualBet,
   MarketKey,
   RawGame,
@@ -46,7 +50,7 @@ import {
 } from "lucide-react";
 
 type ExtraCategory = "hedges" | "unicorns" | "others";
-type GamesSource = "live" | "fallback" | "loading";
+type GamesSource = "idle" | "live" | "error";
 type ExtraPairSlot = "a" | "b";
 type PickerTarget =
   | "anchorA"
@@ -119,13 +123,6 @@ const EXTRA_TITLES: Record<ExtraCategory, string> = {
   hedges: "Hedges",
   unicorns: "Unicorns",
   others: "Others",
-};
-
-const emptyIdentifiedGames: IdentifiedGames = {
-  anchors: [],
-  hedges: [],
-  unicorns: [],
-  others: [],
 };
 
 function SlipLeg({
@@ -296,8 +293,10 @@ function scaleFailsafe(legs: ExtraLeg[], factor: number): ExtraLeg[] {
 }
 
 export default function Home() {
-  const [classified, setClassified] =
-    useState<IdentifiedGames>(emptyIdentifiedGames);
+  const [fetchedClassified, setFetchedClassified] = useState(
+    emptyIdentifiedGames,
+  );
+  const [manualGames, setManualGames] = useState<FormattedGame[]>([]);
   const [overrides, setOverrides] = useState<Record<string, GameBucket>>({});
   const [spread, setSpread] = useState<number>(90);
   const [anchorAId, setAnchorAId] = useState("");
@@ -314,13 +313,18 @@ export default function Home() {
   const [individualBets, setIndividualBets] = useState<IndividualBet[]>([]);
   const [individualGameId, setIndividualGameId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [gamesSource, setGamesSource] = useState<GamesSource>("loading");
+  const [gamesSource, setGamesSource] = useState<GamesSource>("idle");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [reloadToken, setReloadToken] = useState(0);
+  const [loadError, setLoadError] = useState("");
   const [picker, setPicker] = useState<PickerTarget | null>(null);
   const [dateFilter, setDateFilter] = useState(todayDateKey);
   const itemsPerPage = 9;
-  const isBusy = gamesSource === "loading" || isRefreshing;
+  const isBusy = isRefreshing;
+
+  const classified = useMemo(
+    () => mergeIdentifiedGames(fetchedClassified, identifyGames(manualGames)),
+    [fetchedClassified, manualGames],
+  );
 
   const games = useMemo(
     () => applyGameOverrides(classified, overrides),
@@ -346,101 +350,6 @@ export default function Home() {
     }),
     [dateFilter, games],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    let liveApplied = false;
-
-    const applyGames = (data: RawGame[]) => {
-      const formatted = formatAndIdentifyGames(data);
-      setClassified(formatted);
-      setOverrides((current) => {
-        const otherIds = new Set(formatted.others.map((game) => game.id));
-        return Object.fromEntries(
-          Object.entries(current).filter(([id]) => otherIds.has(id)),
-        );
-      });
-
-      const sortedAll = sortGames([
-        ...formatted.anchors,
-        ...formatted.hedges,
-        ...formatted.unicorns,
-        ...formatted.others,
-      ]);
-      const hasGame = (id: string) =>
-        Boolean(id) && sortedAll.some((game) => game.id === id);
-
-      setAnchorAId((current) => (hasGame(current) ? current : ""));
-      setAnchorBId((current) => (hasGame(current) ? current : ""));
-      setExtraPairs((current) =>
-        current
-          .map((pair) => ({
-            aId: hasGame(pair.aId) ? pair.aId : "",
-            bId: hasGame(pair.bId) ? pair.bId : "",
-          }))
-          .filter((pair) => pair.aId || pair.bId),
-      );
-
-      setExtraGameId((current) =>
-        hasGame(current) ? current : (sortedAll[0]?.id ?? ""),
-      );
-    };
-
-    const loadFallback = fetch("/betgames.json", { cache: "no-store" })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to load betgames.json");
-        }
-        return res.json() as Promise<RawGame[]>;
-      })
-      .then((data) => {
-        if (!cancelled && !liveApplied) {
-          applyGames(data);
-          setGamesSource((current) =>
-            current === "live" ? current : "fallback",
-          );
-        }
-      })
-      .catch((err) => console.error("Failed to load fallback matches", err));
-
-    const loadLive = fetch("/api/games", { cache: "no-store" })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to load live matches");
-        }
-        return res.json() as Promise<{
-          games: RawGame[];
-          source: "live" | "fallback";
-        }>;
-      })
-      .then((payload) => {
-        if (
-          !cancelled &&
-          Array.isArray(payload.games) &&
-          payload.games.length > 0
-        ) {
-          if (payload.source === "live") {
-            liveApplied = true;
-          }
-          applyGames(payload.games);
-          setGamesSource(payload.source);
-        }
-      })
-      .catch((err) => console.error("Failed to load live matches", err));
-
-    Promise.allSettled([loadFallback, loadLive]).then(() => {
-      if (!cancelled) {
-        setGamesSource((current) =>
-          current === "loading" ? "fallback" : current,
-        );
-        setIsRefreshing(false);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadToken]);
 
   const visibleAllGames = useMemo(
     () =>
@@ -887,13 +796,79 @@ export default function Home() {
     setCurrentPage(1);
   };
 
-  const refreshGames = () => {
+  const syncSelections = (available: FormattedGame[]) => {
+    const hasGame = (id: string) =>
+      Boolean(id) && available.some((game) => game.id === id);
+    const firstId = available[0]?.id ?? "";
+
+    setAnchorAId((current) => (hasGame(current) ? current : ""));
+    setAnchorBId((current) => (hasGame(current) ? current : ""));
+    setExtraPairs((current) =>
+      current
+        .map((pair) => ({
+          aId: hasGame(pair.aId) ? pair.aId : "",
+          bId: hasGame(pair.bId) ? pair.bId : "",
+        }))
+        .filter((pair) => pair.aId || pair.bId),
+    );
+    setExtraGameId((current) => (hasGame(current) ? current : firstId));
+    setIndividualGameId((current) => (hasGame(current) ? current : firstId));
+  };
+
+  const addManualMatch = (raw: RawGame) => {
+    const existingIds = new Set(allGames.map((game) => game.id));
+    const formatted = formatGame(raw);
+    const unique = existingIds.has(formatted.id)
+      ? formatGame(raw, `${formatted.id} · ${Date.now().toString(16)}`)
+      : formatted;
+    setManualGames((current) => [...current, unique]);
+  };
+
+  const refreshGames = async () => {
     if (isBusy) {
       return;
     }
 
     setIsRefreshing(true);
-    setReloadToken((token) => token + 1);
+    setLoadError("");
+
+    try {
+      const res = await fetch("/api/games?refresh=1", { cache: "no-store" });
+      const payload = (await res.json()) as {
+        games?: RawGame[];
+        error?: string;
+      };
+
+      if (!res.ok) {
+        throw new Error(payload.error || "Failed to load SportPesa matches");
+      }
+
+      const liveGames = Array.isArray(payload.games) ? payload.games : [];
+      const formatted = formatAndIdentifyGames(liveGames);
+      setFetchedClassified(formatted);
+      setOverrides((current) => {
+        const otherIds = new Set([
+          ...formatted.others.map((game) => game.id),
+          ...identifyGames(manualGames).others.map((game) => game.id),
+        ]);
+        return Object.fromEntries(
+          Object.entries(current).filter(([id]) => otherIds.has(id)),
+        );
+      });
+      syncSelections(
+        flattenIdentifiedGames(
+          mergeIdentifiedGames(formatted, identifyGames(manualGames)),
+        ),
+      );
+      setGamesSource("live");
+    } catch (error) {
+      setGamesSource("error");
+      setLoadError(
+        error instanceof Error ? error.message : "Failed to load SportPesa matches",
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleExtraCategoryChange = (nextCategory: ExtraCategory) => {
@@ -942,9 +917,9 @@ export default function Home() {
                 ? "Refreshing matches…"
                 : gamesSource === "live"
                   ? "Live SportPesa matches loaded"
-                  : gamesSource === "loading"
-                    ? "Loading live SportPesa matches…"
-                    : "Using saved sample matches"}
+                  : gamesSource === "error"
+                    ? loadError || "Could not load SportPesa matches"
+                    : "Click Refresh to load SportPesa matches"}
             </p>
           </div>
           <button
@@ -1044,7 +1019,7 @@ export default function Home() {
               <div className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-200">
                 Match date
               </div>
-              {gamesSource === "loading" && allGames.length === 0 ? (
+              {isRefreshing && allGames.length === 0 ? (
                 <div className="flex flex-wrap gap-2" aria-hidden="true">
                   <div className="h-7 w-16 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
                   <div className="h-7 w-20 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
@@ -1887,13 +1862,9 @@ export default function Home() {
                   )}.`
               : "Every match is listed. Search by team name and review the 1X2 and strategy odds before selecting."
         }
-        games={
-          picker === "others"
-            ? extraGames
-            : picker
-              ? visibleAllGames
-              : []
-        }
+        buckets={visibleGames}
+        initialBucket={picker === "others" ? "others" : "all"}
+        onAddMatch={addManualMatch}
         selectedId={
           picker === "anchorA"
             ? anchorAId
