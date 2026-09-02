@@ -45,20 +45,3 @@ jobs:
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Trigger Coolify deployment
-        env:
-          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
-          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-        run: |
-          set -eu
-          if [ -z "${COOLIFY_WEBHOOK:-}" ]; then
-            echo "COOLIFY_WEBHOOK secret is not set; skipping deploy trigger"
-            exit 0
-          fi
-          if [ -n "${COOLIFY_TOKEN:-}" ]; then
-            curl --fail --show-error --request POST "$COOLIFY_WEBHOOK" \
-              --header "Authorization: Bearer $COOLIFY_TOKEN"
-          else
-            curl --fail --show-error --request POST "$COOLIFY_WEBHOOK"
-          fi
