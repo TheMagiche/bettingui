@@ -40,6 +40,7 @@ import type {
 } from "@/utils/bettingLogic";
 import DateFilterChips from "@/app/components/DateFilterChips";
 import GameSelectModal from "@/app/components/GameSelectModal";
+import ThemeSwitcher from "@/app/components/ThemeSwitcher";
 import {
   ChevronLeft,
   ChevronRight,
@@ -926,20 +927,23 @@ export default function Home() {
                     : "Click Refresh to load SportPesa.com matches"}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={refreshGames}
-            disabled={isBusy}
-            aria-busy={isBusy}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:border-blue-400 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
-          >
-            <RefreshCw
-              size={14}
-              className={isBusy ? "animate-spin" : ""}
-              aria-hidden="true"
-            />
-            {isBusy ? "Loading" : "Refresh"}
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeSwitcher />
+            <button
+              type="button"
+              onClick={refreshGames}
+              disabled={isBusy}
+              aria-busy={isBusy}
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:border-blue-400 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+            >
+              <RefreshCw
+                size={14}
+                className={isBusy ? "animate-spin" : ""}
+                aria-hidden="true"
+              />
+              {isBusy ? "Loading" : "Refresh"}
+            </button>
+          </div>
         </div>
       </header>
 
