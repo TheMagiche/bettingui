@@ -12,11 +12,11 @@ services:
     restart: unless-stopped
     shm_size: "1gb"
     expose:
-      - "3000"
+      - "3003"
     environment:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
-      PORT: "3000"
+      PORT: "3003"
       CHROME_PATH: /usr/bin/chromium
       CHROME_NO_SANDBOX: "1"
     healthcheck:
@@ -25,7 +25,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+          "fetch('http://127.0.0.1:3003/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
