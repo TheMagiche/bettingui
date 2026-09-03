@@ -1,0 +1,5 @@
+# Local-only. Coolify deploys docker-compose.yml and ignores this file.
+services:
+  app:
+    build: .
+    pull_policy: build

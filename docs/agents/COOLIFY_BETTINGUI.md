@@ -39,6 +39,7 @@ Remove the `nginx` service, host `ports`, and `container_name`. Coolify connects
 services:
   app:
     image: ${BETTINGUI_IMAGE:-ghcr.io/<owner>/<repo>:latest}
+    pull_policy: always
     restart: unless-stopped
     shm_size: "1gb"
     expose:
@@ -63,7 +64,7 @@ services:
       start_period: 40s
 ```
 
-Keep `build: .` only if you still `docker compose up --build` locally. In Coolify, set `BETTINGUI_IMAGE` to the GHCR tag GitHub Actions pushes so the VPS **pulls** instead of compiling Chromium + Next.js on the box.
+Do not put `build: .` in `docker-compose.yml` — Coolify will compile Chromium + Next.js on the VPS. Production compose should only `image:` + `pull_policy: always`. Local builds use `docker-compose.local.yml`. In Coolify, set `BETTINGUI_IMAGE` to the GHCR tag GitHub Actions pushes.
 
 Optional: add a named volume if the app writes uploads or a SQLite file under `/app` — map that path explicitly so redeploys do not wipe it.
 

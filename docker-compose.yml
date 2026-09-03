@@ -1,14 +1,13 @@
-# Coolify: domain https://bettingui.work.gd → service app port 3000
+# Coolify: domain https://bettingui.work.gd → service app port 3003
 # Do not publish 80/443. Do not run a sidecar nginx.
 #
-# Local: docker compose up --build
-# Coolify: set BETTINGUI_IMAGE to the GHCR tag GitHub Actions pushes so the
-# VPS pulls instead of compiling Chromium + Next.js on the box.
+# Coolify pulls the GHCR image GitHub Actions pushes (no on-server build).
+# Local: docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 
 services:
   app:
-    build: .
     image: ${BETTINGUI_IMAGE:-ghcr.io/themagiche/bettingui:latest}
+    pull_policy: always
     restart: unless-stopped
     shm_size: "1gb"
     expose:
