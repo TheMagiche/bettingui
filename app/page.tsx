@@ -244,10 +244,14 @@ function extraLegKey(leg: Pick<ExtraLeg, "category" | "game">) {
   return `${leg.category}|${leg.game.id}`;
 }
 
+function failsafeLegKey(leg: Pick<ExtraLeg, "game">) {
+  return leg.game.id;
+}
+
 function aggregateExtraLegs(legs: ExtraLeg[]) {
   const aggregated = new Map<string, FailsafeLeg>();
   for (const leg of legs) {
-    const key = extraLegKey(leg);
+    const key = failsafeLegKey(leg);
     const existing = aggregated.get(key);
     if (existing) {
       existing.sourceIds.push(leg.id);
@@ -859,7 +863,7 @@ export default function Home() {
     setExtraLegs((prev) => {
       const matchingLegs = prev.filter(
         (leg) =>
-          extraLegKey(leg) === id ||
+          failsafeLegKey(leg) === id ||
           leg.id === id,
       );
       const editableLegs = matchingLegs.filter((leg) =>
