@@ -244,8 +244,13 @@ function extraLegKey(leg: Pick<ExtraLeg, "category" | "game">) {
   return `${leg.category}|${leg.game.id}`;
 }
 
+function normalizedTeamName(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 function failsafeLegKey(leg: Pick<ExtraLeg, "game">) {
-  return leg.game.id;
+  const { home_team: homeTeam, away_team: awayTeam } = leg.game.originalData;
+  return `${normalizedTeamName(homeTeam)}|${normalizedTeamName(awayTeam)}`;
 }
 
 function aggregateExtraLegs(legs: ExtraLeg[]) {
