@@ -44,6 +44,7 @@ import ThemeSwitcher from "@/app/components/ThemeSwitcher";
 import {
   ChevronLeft,
   ChevronRight,
+  Database,
   Plus,
   RefreshCw,
   Search,
@@ -51,7 +52,7 @@ import {
 } from "lucide-react";
 
 type ExtraCategory = "hedges" | "unicorns" | "others";
-type GamesSource = "idle" | "live" | "error";
+type GamesSource = "idle" | "live" | "cache" | "error";
 type ExtraPairSlot = "a" | "b";
 type PickerTarget =
   | "anchorA"
@@ -112,6 +113,14 @@ type FailsafeTicket = {
   amount: number;
   odds: number;
   returnValue: number;
+};
+
+type FailsafeLeg = Omit<ExtraLeg, "id" | "failsafe" | "target"> & {
+  id: string;
+  sourceIds: string[];
+  failsafe: ExtraLeg["failsafe"];
+  markets: Array<"d" | "l">;
+  sourceMarkets: MarketKey[];
 };
 
 const MARKET_TITLES: Record<MarketKey, string> = {
@@ -229,6 +238,72 @@ function pairIds(pair: ExtraPairIds) {
 
 function extraLegsProduct(legs: ExtraLeg[]) {
   return legs.reduce((product, leg) => product * leg.game[leg.market], 1);
+}
+
+function extraLegKey(leg: Pick<ExtraLeg, "category" | "game">) {
+  return `${leg.category}|${leg.game.id}`;
+}
+
+function normalizedTeamName(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function failsafeLegKey(leg: Pick<ExtraLeg, "game">) {
+  const { home_team: homeTeam, away_team: awayTeam } = leg.game.originalData;
+  return `${normalizedTeamName(homeTeam)}|${normalizedTeamName(awayTeam)}`;
+}
+
+function aggregateExtraLegs(legs: ExtraLeg[]) {
+  const aggregated = new Map<string, FailsafeLeg>();
+  for (const leg of legs) {
+    const key = failsafeLegKey(leg);
+    const existing = aggregated.get(key);
+    if (existing) {
+      existing.sourceIds.push(leg.id);
+      if (!existing.sourceMarkets.includes(leg.market)) {
+        existing.sourceMarkets.push(leg.market);
+      }
+      for (const market of failsafeMarketsFor(leg.market)) {
+        if (!existing.markets.includes(market)) {
+          existing.markets.push(market);
+        }
+      }
+      existing.failsafe = {
+        d: existing.failsafe.d + leg.failsafe.d,
+        l: existing.failsafe.l + leg.failsafe.l,
+      };
+    } else {
+      aggregated.set(key, {
+        ...leg,
+        id: key,
+        sourceIds: [leg.id],
+        sourceMarkets: [leg.market],
+        markets: failsafeMarketsFor(leg.market),
+        failsafe: { ...leg.failsafe },
+      });
+    }
+  }
+  return [...aggregated.values()];
+}
+
+function aggregateTicketExtraLegs(legs: ExtraLeg[]) {
+  const aggregated = new Map<string, ExtraLeg & { markets: MarketKey[] }>();
+  for (const leg of legs) {
+    const key = extraLegKey(leg);
+    const existing = aggregated.get(key);
+    if (existing) {
+      if (!existing.markets.includes(leg.market)) {
+        existing.markets.push(leg.market);
+      }
+    } else {
+      aggregated.set(key, {
+        ...leg,
+        markets: [leg.market],
+        failsafe: { ...leg.failsafe },
+      });
+    }
+  }
+  return [...aggregated.values()];
 }
 
 function ticketMatchesTarget(
@@ -455,6 +530,9 @@ export default function Home() {
     () => activeExtraLegs.filter((leg) => Boolean(leg.target)).length,
     [activeExtraLegs],
   );
+  const failsafeLegs = useMemo(() => {
+    return aggregateExtraLegs(activeExtraLegs);
+  }, [activeExtraLegs]);
 
   const tickets = useMemo<OpeningTicket[]>(() => {
     return combinations.map((combo) => {
@@ -495,9 +573,9 @@ export default function Home() {
 
   const failsafeTickets = useMemo<FailsafeTicket[]>(
     () =>
-      activeExtraLegs
+      failsafeLegs
         .flatMap((leg) =>
-          failsafeMarketsFor(leg.market).map((market) => {
+          leg.markets.map((market) => {
             const amount = Math.max(leg.failsafe[market], 0);
             const odds = leg.game[market];
             return {
@@ -513,7 +591,7 @@ export default function Home() {
           }),
         )
         .sort((a, b) => b.returnValue - a.returnValue),
-    [activeExtraLegs],
+    [failsafeLegs],
   );
 
   const failsafeStake = useMemo(
@@ -541,8 +619,6 @@ export default function Home() {
 
   const totalStake = openingStake + failsafeStake + individualStake;
 
-  const workingSpread = openingSpread + failsafeStake;
-
   const payoutGroup = useMemo(
     () => failsafePayoutGroup(tickets, failsafeTickets),
     [failsafeTickets, tickets],
@@ -560,15 +636,27 @@ export default function Home() {
     () => [...tickets].sort((a, b) => b.returnValue - a.returnValue),
     [tickets],
   );
+  const betslipTickets = useMemo(
+    () => sortedTickets.filter((ticket) => ticket.amount > 0),
+    [sortedTickets],
+  );
+  const betslipFailsafeTickets = useMemo(
+    () => failsafeTickets.filter((ticket) => ticket.amount > 0),
+    [failsafeTickets],
+  );
+  const betslipIndividualTickets = useMemo(
+    () => individualTickets.filter((ticket) => ticket.amount > 0),
+    [individualTickets],
+  );
 
   const paginatedTickets = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return sortedTickets.slice(start, start + itemsPerPage);
-  }, [currentPage, sortedTickets]);
+    return betslipTickets.slice(start, start + itemsPerPage);
+  }, [betslipTickets, currentPage]);
 
   const totalPages = Math.max(
     1,
-    Math.ceil(sortedTickets.length / itemsPerPage),
+    Math.ceil(betslipTickets.length / itemsPerPage),
   );
 
   const updateCellAmount = (id: string, value: string) => {
@@ -777,13 +865,35 @@ export default function Home() {
     const nextAmount = Number.isFinite(parsedValue)
       ? Math.max(parsedValue, 0)
       : 0;
-    setExtraLegs((prev) =>
-      prev.map((leg) =>
-        leg.id === id
-          ? { ...leg, failsafe: { ...leg.failsafe, [market]: nextAmount } }
-          : leg,
-      ),
-    );
+    setExtraLegs((prev) => {
+      const matchingLegs = prev.filter(
+        (leg) =>
+          failsafeLegKey(leg) === id ||
+          leg.id === id,
+      );
+      const editableLegs = matchingLegs.filter((leg) =>
+        failsafeMarketsFor(leg.market).includes(market),
+      );
+      const currentAmount = editableLegs.reduce(
+        (sum, leg) => sum + leg.failsafe[market],
+        0,
+      );
+
+      return prev.map((leg) => {
+        const index = editableLegs.indexOf(leg);
+        if (index < 0) {
+          return leg;
+        }
+
+        const amount =
+          currentAmount > 0
+            ? leg.failsafe[market] * (nextAmount / currentAmount)
+            : index === 0
+              ? nextAmount
+              : 0;
+        return { ...leg, failsafe: { ...leg.failsafe, [market]: amount } };
+      });
+    });
   };
 
   const clearBuilder = () => {
@@ -827,7 +937,7 @@ export default function Home() {
     return unique;
   };
 
-  const refreshGames = async () => {
+  const loadGames = async (source: "live" | "cache") => {
     if (isBusy) {
       return;
     }
@@ -836,9 +946,11 @@ export default function Home() {
     setLoadError("");
 
     try {
-      const res = await fetch("/api/games?refresh=1", { cache: "no-store" });
+      const query = source === "cache" ? "cache=1" : "refresh=1";
+      const res = await fetch(`/api/games?${query}`, { cache: "no-store" });
       const payload = (await res.json()) as {
         games?: RawGame[];
+        source?: "live" | "cache";
         error?: string;
       };
 
@@ -863,7 +975,7 @@ export default function Home() {
           mergeIdentifiedGames(formatted, identifyGames(manualGames)),
         ),
       );
-      setGamesSource("live");
+      setGamesSource(payload.source ?? "live");
     } catch (error) {
       setGamesSource("error");
       setLoadError(
@@ -922,6 +1034,8 @@ export default function Home() {
                 ? "Refreshing matches…"
                 : gamesSource === "live"
                   ? "Live SportPesa matches loaded"
+                  : gamesSource === "cache"
+                    ? "Using cached SportPesa matches"
                   : gamesSource === "error"
                     ? loadError || "Could not load SportPesa matches"
                     : "Click Refresh to load SportPesa.com matches"}
@@ -931,7 +1045,7 @@ export default function Home() {
             <ThemeSwitcher />
             <button
               type="button"
-              onClick={refreshGames}
+              onClick={() => loadGames("live")}
               disabled={isBusy}
               aria-busy={isBusy}
               className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:border-blue-400 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
@@ -942,6 +1056,15 @@ export default function Home() {
                 aria-hidden="true"
               />
               {isBusy ? "Loading" : "Refresh"}
+            </button>
+            <button
+              type="button"
+              onClick={() => loadGames("cache")}
+              disabled={isBusy}
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:border-blue-400 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+            >
+              <Database size={14} aria-hidden="true" />
+              Load cache
             </button>
           </div>
         </div>
@@ -1483,9 +1606,9 @@ export default function Home() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold">Betslip</h2>
               <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                {tickets.length +
-                  failsafeTickets.length +
-                  individualTickets.length}
+                {betslipTickets.length +
+                  betslipFailsafeTickets.length +
+                  betslipIndividualTickets.length}
               </span>
             </div>
 
@@ -1519,18 +1642,20 @@ export default function Home() {
                         game={resolvedPairs[ticket.pairIndex].b}
                         market={ticket.markets[1]}
                       />
-                      {ticket.extraLegs.map((leg) => (
-                        <SlipLeg
-                          key={`${ticket.id}-${leg.id}`}
-                          label={
-                            leg.target
-                              ? `${EXTRA_TITLES[leg.category].slice(0, -1)} cell`
-                              : EXTRA_TITLES[leg.category].slice(0, -1)
-                          }
-                          game={leg.game}
-                          market={leg.market}
-                        />
-                      ))}
+                      {aggregateTicketExtraLegs(ticket.extraLegs).map((leg) =>
+                        leg.markets.map((market) => (
+                          <SlipLeg
+                            key={`${ticket.id}-${leg.id}-${market}`}
+                            label={
+                              leg.target
+                                ? `${EXTRA_TITLES[leg.category].slice(0, -1)} cell`
+                                : EXTRA_TITLES[leg.category].slice(0, -1)
+                            }
+                            game={leg.game}
+                            market={market}
+                          />
+                        )),
+                      )}
                     </div>
                   )}
 
@@ -1541,14 +1666,16 @@ export default function Home() {
                   />
                 </div>
               ))}
-              {tickets.length === 0 && individualTickets.length === 0 && (
+              {betslipTickets.length === 0 &&
+                betslipFailsafeTickets.length === 0 &&
+                betslipIndividualTickets.length === 0 && (
                 <p className="py-6 text-sm text-zinc-400">
                   The opening tickets appear here after both anchors are chosen.
                 </p>
               )}
             </div>
 
-            {tickets.length > itemsPerPage && (
+            {betslipTickets.length > itemsPerPage && (
               <div className="mt-4 flex items-center justify-center gap-2">
                 <button
                   onClick={() =>
@@ -1574,12 +1701,12 @@ export default function Home() {
               </div>
             )}
 
-            {failsafeTickets.length > 0 && (
+            {betslipFailsafeTickets.length > 0 && (
               <div className="mt-4 space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
                 <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                   Failsafe
                 </div>
-                {failsafeTickets.map((ticket) => (
+                {betslipFailsafeTickets.map((ticket) => (
                   <div key={ticket.id} className="betslip-card">
                     <SlipLeg
                       label={`${EXTRA_TITLES[ticket.category].slice(0, -1)} failsafe`}
@@ -1596,12 +1723,12 @@ export default function Home() {
               </div>
             )}
 
-            {individualTickets.length > 0 && (
+            {betslipIndividualTickets.length > 0 && (
               <div className="mt-4 space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
                 <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                   Individual
                 </div>
-                {individualTickets.map((ticket) => (
+                {betslipIndividualTickets.map((ticket) => (
                   <div key={ticket.id} className="betslip-card">
                     <SlipLeg
                       label="Individual"
@@ -1621,7 +1748,7 @@ export default function Home() {
             <div className="mt-5 border-t border-zinc-200 pt-4 dark:border-zinc-800">
               <div className="mb-1 flex justify-between text-sm">
                 <span>Opening tickets</span>
-                <span>{tickets.length}</span>
+                <span>{betslipTickets.length}</span>
               </div>
               <div className="mb-1 flex justify-between text-sm">
                 <span>Opening stake</span>
@@ -1666,17 +1793,17 @@ export default function Home() {
               </div>
               <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
                 <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-                  Spread + failsafe
+                  Failsafe spread
                 </div>
                 <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-                  ${workingSpread.toFixed(2)}
+                  ${failsafeStake.toFixed(2)}
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {activeExtraLegs.map((leg) => {
-                const markets = failsafeMarketsFor(leg.market);
+              {failsafeLegs.map((leg) => {
+                const markets = leg.markets;
                 return (
                   <div key={`${leg.id}-failsafe`} className="bet-builder-card">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
@@ -1685,11 +1812,6 @@ export default function Home() {
                     <h3 className="mt-1 text-base font-bold text-zinc-900 dark:text-zinc-50">
                       {gameTitle(leg.game)}
                     </h3>
-                    {leg.target ? (
-                      <CellExtraMarker
-                        label={extraLegTargetLabel(leg.target, resolvedPairs)}
-                      />
-                    ) : null}
                     {formatKickoff(leg.game) ? (
                       <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                         {formatKickoff(leg.game)}
