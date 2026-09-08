@@ -115,6 +115,14 @@ type FailsafeTicket = {
   returnValue: number;
 };
 
+type FailsafeLeg = Omit<ExtraLeg, "id" | "failsafe" | "target"> & {
+  id: string;
+  sourceIds: string[];
+  failsafe: ExtraLeg["failsafe"];
+  markets: Array<"d" | "l">;
+  sourceMarkets: MarketKey[];
+};
+
 const MARKET_TITLES: Record<MarketKey, string> = {
   w: "Win",
   d: "Draw",
@@ -230,6 +238,63 @@ function pairIds(pair: ExtraPairIds) {
 
 function extraLegsProduct(legs: ExtraLeg[]) {
   return legs.reduce((product, leg) => product * leg.game[leg.market], 1);
+}
+
+function extraLegKey(leg: Pick<ExtraLeg, "category" | "game">) {
+  return `${leg.category}|${leg.game.id}`;
+}
+
+function aggregateExtraLegs(legs: ExtraLeg[]) {
+  const aggregated = new Map<string, FailsafeLeg>();
+  for (const leg of legs) {
+    const key = extraLegKey(leg);
+    const existing = aggregated.get(key);
+    if (existing) {
+      existing.sourceIds.push(leg.id);
+      if (!existing.sourceMarkets.includes(leg.market)) {
+        existing.sourceMarkets.push(leg.market);
+      }
+      for (const market of failsafeMarketsFor(leg.market)) {
+        if (!existing.markets.includes(market)) {
+          existing.markets.push(market);
+        }
+      }
+      existing.failsafe = {
+        d: existing.failsafe.d + leg.failsafe.d,
+        l: existing.failsafe.l + leg.failsafe.l,
+      };
+    } else {
+      aggregated.set(key, {
+        ...leg,
+        id: key,
+        sourceIds: [leg.id],
+        sourceMarkets: [leg.market],
+        markets: failsafeMarketsFor(leg.market),
+        failsafe: { ...leg.failsafe },
+      });
+    }
+  }
+  return [...aggregated.values()];
+}
+
+function aggregateTicketExtraLegs(legs: ExtraLeg[]) {
+  const aggregated = new Map<string, ExtraLeg & { markets: MarketKey[] }>();
+  for (const leg of legs) {
+    const key = extraLegKey(leg);
+    const existing = aggregated.get(key);
+    if (existing) {
+      if (!existing.markets.includes(leg.market)) {
+        existing.markets.push(leg.market);
+      }
+    } else {
+      aggregated.set(key, {
+        ...leg,
+        markets: [leg.market],
+        failsafe: { ...leg.failsafe },
+      });
+    }
+  }
+  return [...aggregated.values()];
 }
 
 function ticketMatchesTarget(
@@ -457,15 +522,7 @@ export default function Home() {
     [activeExtraLegs],
   );
   const failsafeLegs = useMemo(() => {
-    const seen = new Set<string>();
-    return activeExtraLegs.filter((leg) => {
-      const key = `${leg.category}|${leg.game.id}`;
-      if (seen.has(key)) {
-        return false;
-      }
-      seen.add(key);
-      return true;
-    });
+    return aggregateExtraLegs(activeExtraLegs);
   }, [activeExtraLegs]);
 
   const tickets = useMemo<OpeningTicket[]>(() => {
@@ -507,9 +564,9 @@ export default function Home() {
 
   const failsafeTickets = useMemo<FailsafeTicket[]>(
     () =>
-      activeExtraLegs
+      failsafeLegs
         .flatMap((leg) =>
-          failsafeMarketsFor(leg.market).map((market) => {
+          leg.markets.map((market) => {
             const amount = Math.max(leg.failsafe[market], 0);
             const odds = leg.game[market];
             return {
@@ -525,7 +582,7 @@ export default function Home() {
           }),
         )
         .sort((a, b) => b.returnValue - a.returnValue),
-    [activeExtraLegs],
+    [failsafeLegs],
   );
 
   const failsafeStake = useMemo(
@@ -799,13 +856,35 @@ export default function Home() {
     const nextAmount = Number.isFinite(parsedValue)
       ? Math.max(parsedValue, 0)
       : 0;
-    setExtraLegs((prev) =>
-      prev.map((leg) =>
-        leg.id === id
-          ? { ...leg, failsafe: { ...leg.failsafe, [market]: nextAmount } }
-          : leg,
-      ),
-    );
+    setExtraLegs((prev) => {
+      const matchingLegs = prev.filter(
+        (leg) =>
+          extraLegKey(leg) === id ||
+          leg.id === id,
+      );
+      const editableLegs = matchingLegs.filter((leg) =>
+        failsafeMarketsFor(leg.market).includes(market),
+      );
+      const currentAmount = editableLegs.reduce(
+        (sum, leg) => sum + leg.failsafe[market],
+        0,
+      );
+
+      return prev.map((leg) => {
+        const index = editableLegs.indexOf(leg);
+        if (index < 0) {
+          return leg;
+        }
+
+        const amount =
+          currentAmount > 0
+            ? leg.failsafe[market] * (nextAmount / currentAmount)
+            : index === 0
+              ? nextAmount
+              : 0;
+        return { ...leg, failsafe: { ...leg.failsafe, [market]: amount } };
+      });
+    });
   };
 
   const clearBuilder = () => {
@@ -1554,18 +1633,20 @@ export default function Home() {
                         game={resolvedPairs[ticket.pairIndex].b}
                         market={ticket.markets[1]}
                       />
-                      {ticket.extraLegs.map((leg) => (
-                        <SlipLeg
-                          key={`${ticket.id}-${leg.id}`}
-                          label={
-                            leg.target
-                              ? `${EXTRA_TITLES[leg.category].slice(0, -1)} cell`
-                              : EXTRA_TITLES[leg.category].slice(0, -1)
-                          }
-                          game={leg.game}
-                          market={leg.market}
-                        />
-                      ))}
+                      {aggregateTicketExtraLegs(ticket.extraLegs).map((leg) =>
+                        leg.markets.map((market) => (
+                          <SlipLeg
+                            key={`${ticket.id}-${leg.id}-${market}`}
+                            label={
+                              leg.target
+                                ? `${EXTRA_TITLES[leg.category].slice(0, -1)} cell`
+                                : EXTRA_TITLES[leg.category].slice(0, -1)
+                            }
+                            game={leg.game}
+                            market={market}
+                          />
+                        )),
+                      )}
                     </div>
                   )}
 
@@ -1713,7 +1794,7 @@ export default function Home() {
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {failsafeLegs.map((leg) => {
-                const markets = failsafeMarketsFor(leg.market);
+                const markets = leg.markets;
                 return (
                   <div key={`${leg.id}-failsafe`} className="bet-builder-card">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
@@ -1722,11 +1803,6 @@ export default function Home() {
                     <h3 className="mt-1 text-base font-bold text-zinc-900 dark:text-zinc-50">
                       {gameTitle(leg.game)}
                     </h3>
-                    {leg.target ? (
-                      <CellExtraMarker
-                        label={extraLegTargetLabel(leg.target, resolvedPairs)}
-                      />
-                    ) : null}
                     {formatKickoff(leg.game) ? (
                       <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                         {formatKickoff(leg.game)}
