@@ -91,10 +91,7 @@ type ExtraLeg = {
   category: ExtraCategory;
   game: FormattedGame;
   market: MarketKey;
-  failsafe: {
-    d: number;
-    l: number;
-  };
+  failsafe: Record<MarketKey, number>;
   target?: ExtraLegTarget;
 };
 
@@ -120,7 +117,7 @@ type FailsafeTicket = {
   legId: string;
   category: ExtraCategory;
   game: FormattedGame;
-  market: "d" | "l";
+  market: MarketKey;
   amount: number;
   odds: number;
   returnValue: number;
@@ -130,7 +127,7 @@ type FailsafeLeg = Omit<ExtraLeg, "id" | "failsafe" | "target"> & {
   id: string;
   sourceIds: string[];
   failsafe: ExtraLeg["failsafe"];
-  markets: Array<"d" | "l">;
+  markets: MarketKey[];
   sourceMarkets: MarketKey[];
 };
 
@@ -333,6 +330,7 @@ function aggregateExtraLegs(legs: ExtraLeg[]) {
         }
       }
       existing.failsafe = {
+        w: existing.failsafe.w + leg.failsafe.w,
         d: existing.failsafe.d + leg.failsafe.d,
         l: existing.failsafe.l + leg.failsafe.l,
       };
@@ -452,6 +450,33 @@ function ExtraTargetMarker({
   );
 }
 
+function failsafeAmounts(
+  hedgeMarket: MarketKey,
+  stake: number,
+  current?: Record<MarketKey, number>,
+): Record<MarketKey, number> {
+  return {
+    w:
+      hedgeMarket === "w"
+        ? 0
+        : current?.w && current.w > 0
+          ? current.w
+          : stake,
+    d:
+      hedgeMarket === "d"
+        ? 0
+        : current?.d && current.d > 0
+          ? current.d
+          : stake,
+    l:
+      hedgeMarket === "l"
+        ? 0
+        : current?.l && current.l > 0
+          ? current.l
+          : stake,
+  };
+}
+
 function scaleFailsafe(legs: ExtraLeg[], factor: number): ExtraLeg[] {
   if (factor === 1) {
     return legs;
@@ -465,6 +490,7 @@ function scaleFailsafe(legs: ExtraLeg[], factor: number): ExtraLeg[] {
     return {
       ...leg,
       failsafe: {
+        w: roundMoney(leg.failsafe.w * factor),
         d: roundMoney(leg.failsafe.d * factor),
         l: roundMoney(leg.failsafe.l * factor),
       },
@@ -767,8 +793,8 @@ export default function Home() {
   const totalStake = openingStake + failsafeStake + individualStake;
 
   const payoutGroup = useMemo(
-    () => failsafePayoutGroup(tickets, failsafeTickets),
-    [failsafeTickets, tickets],
+    () => failsafePayoutGroup(tickets, failsafeTickets, individualTickets),
+    [failsafeTickets, individualTickets, tickets],
   );
 
   const openingRange = useMemo(() => openingReturnRange(tickets), [tickets]);
@@ -853,7 +879,7 @@ export default function Home() {
           category: "hedges",
           game,
           market: "w",
-          failsafe: { d: failsafeStake, l: failsafeStake },
+          failsafe: failsafeAmounts("w", failsafeStake),
           target,
         },
       ];
@@ -1000,7 +1026,21 @@ export default function Home() {
 
   const updateExtraMarket = (id: string, market: MarketKey) => {
     setExtraLegs((prev) =>
-      prev.map((leg) => (leg.id === id ? { ...leg, market } : leg)),
+      prev.map((leg) => {
+        if (leg.id !== id || leg.market === market) {
+          return leg;
+        }
+
+        const seed =
+          leg.target?.kind === "individual"
+            ? FAILSAFE_DEFAULT_STAKE
+            : failsafeDefault;
+        return {
+          ...leg,
+          market,
+          failsafe: failsafeAmounts(market, seed, leg.failsafe),
+        };
+      }),
     );
   };
 
@@ -1010,7 +1050,7 @@ export default function Home() {
 
   const updateFailsafeAmount = (
     id: string,
-    market: "d" | "l",
+    market: MarketKey,
     value: string,
   ) => {
     const parsedValue = Number(value);
@@ -1230,7 +1270,7 @@ export default function Home() {
                   {equalStake.toFixed(2)} per cell · opening $
                   {openingSpread.toFixed(2)}
                   {activeExtraLegs.length > 0
-                    ? ` · each failsafe draw/loss starts at $${failsafeDefault.toFixed(2)}`
+                    ? ` · each remaining failsafe outcome starts at $${failsafeDefault.toFixed(2)}`
                     : ""}
                 </span>
               </div>
@@ -1923,11 +1963,14 @@ export default function Home() {
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                   Failsafe
                 </div>
-                <h2 className="mt-1 text-2xl font-bold">Draw and loss cover</h2>
+                <h2 className="mt-1 text-2xl font-bold">
+                  Remaining outcome cover
+                </h2>
                 <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  If a hedge misses, boosted tickets pay nothing.
-                  Either draw or loss still hits, and that failsafe is a given
-                  in the payout group. Each side starts at $
+                  If a hedge misses, boosted tickets pay nothing. The other two
+                  results still hit, and those failsafes are a given in the
+                  payout group. Win is included when the hedge is draw or loss.
+                  Each side starts at $
                   {failsafeDefault.toFixed(2)}
                   {coverScale > 1
                     ? ` (${coverScale}× for ${coverScale} pairs)`
@@ -2020,7 +2063,7 @@ export default function Home() {
         )}
 
         <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800">
               <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
                 Total stake
@@ -2039,46 +2082,72 @@ export default function Home() {
               </div>
             </div>
 
-            {activeExtraLegs.length > 0 ? (
+            {activeExtraLegs.length > 0 || individualStake > 0 ? (
               <>
-                <PayoutScenario
-                  title="Boosted wins"
-                  detail="Boosted tickets including extras"
-                  low={payoutGroup.boostedLow}
-                  high={payoutGroup.boostedHigh}
-                />
-                <PayoutScenario
-                  title="Unboosted wins"
-                  detail={
-                    payoutGroup.unboostedHigh === 0 &&
-                    payoutGroup.unboostedLow === 0
-                      ? "No unboosted tickets"
-                      : `${coverMultiplier}× cover tickets`
-                  }
-                  low={payoutGroup.unboostedLow}
-                  high={payoutGroup.unboostedHigh}
-                />
-                <PayoutScenario
-                  title="Failsafe draws"
-                  detail="Failsafe draw payout only"
-                  low={payoutGroup.drawLow}
-                  high={payoutGroup.drawHigh}
-                />
-                <PayoutScenario
-                  title="Failsafe losses"
-                  detail="Failsafe loss payout only"
-                  low={payoutGroup.lossLow}
-                  high={payoutGroup.lossHigh}
-                />
+                {activeExtraLegs.length > 0 ? (
+                  <>
+                    <PayoutScenario
+                      title="Boosted wins"
+                      detail="Boosted tickets including extras"
+                      low={payoutGroup.boostedLow}
+                      high={payoutGroup.boostedHigh}
+                    />
+                    <PayoutScenario
+                      title="Unboosted wins"
+                      detail={
+                        payoutGroup.unboostedHigh === 0 &&
+                        payoutGroup.unboostedLow === 0
+                          ? "No unboosted tickets"
+                          : `${coverMultiplier}× cover tickets`
+                      }
+                      low={payoutGroup.unboostedLow}
+                      high={payoutGroup.unboostedHigh}
+                    />
+                    <PayoutScenario
+                      title="Failsafe wins"
+                      detail="Failsafe win payout only"
+                      low={payoutGroup.winLow}
+                      high={payoutGroup.winHigh}
+                    />
+                    <PayoutScenario
+                      title="Failsafe draws"
+                      detail="Failsafe draw payout only"
+                      low={payoutGroup.drawLow}
+                      high={payoutGroup.drawHigh}
+                    />
+                    <PayoutScenario
+                      title="Failsafe losses"
+                      detail="Failsafe loss payout only"
+                      low={payoutGroup.lossLow}
+                      high={payoutGroup.lossHigh}
+                    />
+                  </>
+                ) : null}
+                {individualStake > 0 ? (
+                  <PayoutScenario
+                    title="Individual bets"
+                    detail={
+                      betslipIndividualTickets.length === 1
+                        ? "Single ticket payout"
+                        : `${betslipIndividualTickets.length} singles aggregated`
+                    }
+                    low={payoutGroup.individualLow}
+                    high={payoutGroup.individualHigh}
+                  />
+                ) : null}
                 <PayoutScenario
                   title="Combo wins"
-                  detail="Total win range including individual"
+                  detail={
+                    individualStake > 0
+                      ? "Total win range including individual"
+                      : "Total win range"
+                  }
                   low={payoutGroup.comboLow}
                   high={payoutGroup.comboHigh}
                 />
               </>
             ) : (
-              <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800 sm:col-span-1 xl:col-span-2 2xl:col-span-5">
+              <div className="rounded-xl bg-zinc-100 px-4 py-3 text-right dark:bg-zinc-800 sm:col-span-1 xl:col-span-2 2xl:col-span-3">
                 <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
                   Total payout group
                 </div>
