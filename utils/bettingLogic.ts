@@ -341,7 +341,7 @@ export function cartesianMarkets(count: number): MarketKey[][] {
   );
 }
 
-export const FAILSAFE_MARKETS = ["d", "l"] as const;
+export const FAILSAFE_MARKETS = MARKET_KEYS;
 export const FAILSAFE_DEFAULT_STAKE = 10;
 export const INDIVIDUAL_DEFAULT_STAKE = 10;
 
@@ -453,7 +453,8 @@ export function openingReturnRange(
 
 export function failsafePayoutGroup(
   tickets: { pairIndex: number; boosted: boolean; returnValue: number }[],
-  failsafeTickets: { market: "d" | "l"; amount: number; returnValue: number }[]
+  failsafeTickets: { market: MarketKey; amount: number; returnValue: number }[],
+  individualTickets: { amount: number; returnValue: number }[] = []
 ) {
   const boosted = { low: 0, high: 0 };
   const unboosted = { low: 0, high: 0 };
@@ -487,6 +488,9 @@ export function failsafePayoutGroup(
   }
 
   const fundedFailsafes = failsafeTickets.filter((ticket) => ticket.amount > 0);
+  const winReturns = fundedFailsafes
+    .filter((ticket) => ticket.market === "w")
+    .map((ticket) => ticket.returnValue);
   const drawReturns = fundedFailsafes
     .filter((ticket) => ticket.market === "d")
     .map((ticket) => ticket.returnValue);
@@ -497,16 +501,34 @@ export function failsafePayoutGroup(
   const missOpenings = [missOpening.low, missOpening.high].filter(
     (value, index, values) => values.indexOf(value) === index
   );
+  const winFailsafe = payoutRange(winReturns);
   const drawFailsafe = payoutRange(drawReturns);
   const lossFailsafe = payoutRange(lossReturns);
+  const wins = leveragedEarnings(winReturns, missOpenings, hasBoosted);
   const draws = leveragedEarnings(drawReturns, missOpenings, hasBoosted);
   const losses = leveragedEarnings(lossReturns, missOpenings, hasBoosted);
-  const comboValues = [...draws.values, ...losses.values];
+  const fundedIndividuals = individualTickets.filter((ticket) => ticket.amount > 0);
+  const individualReturns = fundedIndividuals.map((ticket) => ticket.returnValue);
+  const individualTotal = individualReturns.reduce((sum, value) => sum + value, 0);
+  const individual = payoutRange(
+    individualTotal > 0 ? [individualTotal] : individualReturns
+  );
+
+  const comboValues = [...wins.values, ...draws.values, ...losses.values];
   if (comboValues.length === 0 && hasUnboosted) {
     comboValues.push(unboosted.low, unboosted.high);
   }
   if (hasBoosted) {
     comboValues.push(boosted.low, boosted.high);
+  }
+  if (individualTotal > 0) {
+    if (comboValues.length === 0) {
+      comboValues.push(individualTotal);
+    } else {
+      for (let i = 0; i < comboValues.length; i += 1) {
+        comboValues[i] += individualTotal;
+      }
+    }
   }
   const combo = payoutRange(comboValues);
 
@@ -515,10 +537,14 @@ export function failsafePayoutGroup(
     boostedHigh: boosted.high,
     unboostedLow: unboosted.low,
     unboostedHigh: unboosted.high,
+    winLow: winFailsafe.low,
+    winHigh: winFailsafe.high,
     drawLow: drawFailsafe.low,
     drawHigh: drawFailsafe.high,
     lossLow: lossFailsafe.low,
     lossHigh: lossFailsafe.high,
+    individualLow: individual.low,
+    individualHigh: individual.high,
     comboLow: combo.low,
     comboHigh: combo.high,
   };
