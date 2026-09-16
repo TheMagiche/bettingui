@@ -255,6 +255,67 @@ function normalizedTeamName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function gameTeams(game: FormattedGame) {
+  return [
+    normalizedTeamName(game.originalData.home_team),
+    normalizedTeamName(game.originalData.away_team),
+  ];
+}
+
+function gamesShareTeam(a: FormattedGame, b: FormattedGame) {
+  const teams = new Set(gameTeams(a));
+  return gameTeams(b).some((team) => teams.has(team));
+}
+
+function extraLegSourceGames(
+  target: ExtraLegTarget,
+  pairs: AnchorPair[],
+  individualBets: IndividualBet[],
+) {
+  if (target.kind === "individual") {
+    const bet = individualBets.find((item) => item.id === target.betId);
+    return bet ? [bet.game] : [];
+  }
+
+  const pair = pairs.find(
+    (item) => item.a.id === target.aId && item.b.id === target.bId,
+  );
+  return pair ? [pair.a, pair.b] : [];
+}
+
+function blockedHedgePicker(
+  target: ExtraLegTarget,
+  pairs: AnchorPair[],
+  individualBets: IndividualBet[],
+  extraLegs: ExtraLeg[],
+  candidates: FormattedGame[],
+) {
+  const blockedTeams = new Set(
+    extraLegSourceGames(target, pairs, individualBets).flatMap(gameTeams),
+  );
+  const alreadyUsed = new Set(
+    extraLegs
+      .filter((leg) => leg.target && extraTargetEquals(leg.target, target))
+      .map((leg) => leg.game.id),
+  );
+  const ids: string[] = [];
+  const reasons: Record<string, string> = {};
+
+  for (const game of candidates) {
+    if (alreadyUsed.has(game.id)) {
+      ids.push(game.id);
+      reasons[game.id] = "Already hedging this ticket";
+      continue;
+    }
+    if (gameTeams(game).some((team) => blockedTeams.has(team))) {
+      ids.push(game.id);
+      reasons[game.id] = "Shares a team with this ticket";
+    }
+  }
+
+  return { ids, reasons };
+}
+
 function failsafeLegKey(leg: Pick<ExtraLeg, "game">) {
   const { home_team: homeTeam, away_team: awayTeam } = leg.game.originalData;
   return `${normalizedTeamName(homeTeam)}|${normalizedTeamName(awayTeam)}`;
@@ -529,6 +590,33 @@ export default function Home() {
     () => visibleAllGames.filter((game) => !usedAnchorIds.includes(game.id)),
     [visibleAllGames, usedAnchorIds],
   );
+  const hedgePickerBlock = useMemo(() => {
+    const target =
+      picker === "cellExtra"
+        ? cellExtraPicker
+        : picker === "individualExtra"
+          ? individualExtraPicker
+          : null;
+    if (!target) {
+      return { ids: [] as string[], reasons: {} as Record<string, string> };
+    }
+
+    return blockedHedgePicker(
+      target,
+      resolvedPairs,
+      individualBets,
+      extraLegs,
+      visibleAllGames,
+    );
+  }, [
+    cellExtraPicker,
+    extraLegs,
+    individualBets,
+    individualExtraPicker,
+    picker,
+    resolvedPairs,
+    visibleAllGames,
+  ]);
   const pairCount = resolvedPairs.length;
   const coverScale = coverScaleFor(pairCount);
   const coverMultiplier = COVER_MULTIPLIER;
@@ -735,19 +823,41 @@ export default function Home() {
       return;
     }
 
-    setExtraLegs((prev) => [
-      ...prev,
-      {
-        id: `hedges-${game.id}-${Date.now()}-${Math.random()
-          .toString(16)
-          .slice(2)}`,
-        category: "hedges",
-        game,
-        market: "w",
-        failsafe: { d: failsafeStake, l: failsafeStake },
-        target,
-      },
-    ]);
+    const sourceGames = extraLegSourceGames(
+      target,
+      resolvedPairs,
+      individualBets,
+    );
+    if (sourceGames.some((source) => gamesShareTeam(source, game))) {
+      return;
+    }
+
+    setExtraLegs((prev) => {
+      if (
+        prev.some(
+          (leg) =>
+            leg.game.id === game.id &&
+            leg.target &&
+            extraTargetEquals(leg.target, target),
+        )
+      ) {
+        return prev;
+      }
+
+      return [
+        ...prev,
+        {
+          id: `hedges-${game.id}-${Date.now()}-${Math.random()
+            .toString(16)
+            .slice(2)}`,
+          category: "hedges",
+          game,
+          market: "w",
+          failsafe: { d: failsafeStake, l: failsafeStake },
+          target,
+        },
+      ];
+    });
   };
 
   const addIndividualBet = (
@@ -1565,8 +1675,8 @@ export default function Home() {
               <h3 className="text-lg font-bold">Hedges</h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                 Add a hedge from a grid cell or an individual bet to multiply
-                that ticket only. Shared hedges apply to every pair. You can
-                pick any match as a hedge.
+                that ticket only. A hedge cannot share teams with the ticket it
+                covers. Teams from one pair can still be reused in another pair.
               </p>
 
               {activeExtraLegs.length > 0 && (
@@ -2022,19 +2132,21 @@ export default function Home() {
         description={
           picker === "individual"
             ? "Search by team name and add a single that stays off the opening book."
-            : picker === "cellExtra" && cellExtraPicker
-              ? `This hedge only multiplies ${extraLegTargetLabel(
-                  cellExtraPicker,
-                  resolvedPairs,
-                  individualBets,
-                )}.`
-              : picker === "individualExtra" && individualExtraPicker
+            : picker === "extraAnchor"
+              ? "A match already used as an anchor cannot be picked again, but teams from one pair can be reused in another pair."
+              : picker === "cellExtra" && cellExtraPicker
                 ? `This hedge only multiplies ${extraLegTargetLabel(
-                    individualExtraPicker,
+                    cellExtraPicker,
                     resolvedPairs,
                     individualBets,
-                  )}.`
-                : "Every match is listed. Search by team name and review the 1X2 and strategy odds before selecting."
+                  )}. Matches that share a team with this ticket cannot be used.`
+                : picker === "individualExtra" && individualExtraPicker
+                  ? `This hedge only multiplies ${extraLegTargetLabel(
+                      individualExtraPicker,
+                      resolvedPairs,
+                      individualBets,
+                    )}. Matches that share a team with this ticket cannot be used.`
+                  : "Every match is listed. Search by team name and review the 1X2 and strategy odds before selecting."
         }
         buckets={visibleGames}
         initialBucket="all"
@@ -2070,33 +2182,14 @@ export default function Home() {
                       ];
                     return id !== currentId;
                   })
-                : picker === "cellExtra" && cellExtraPicker
-                  ? activeExtraLegs
-                      .filter(
-                        (leg) =>
-                          leg.target &&
-                          extraTargetEquals(leg.target, cellExtraPicker),
-                      )
-                      .map((leg) => leg.game.id)
-                  : picker === "individualExtra" && individualExtraPicker
-                    ? [
-                        ...activeExtraLegs
-                          .filter(
-                            (leg) =>
-                              leg.target &&
-                              extraTargetEquals(
-                                leg.target,
-                                individualExtraPicker,
-                              ),
-                          )
-                          .map((leg) => leg.game.id),
-                        ...(individualBets
-                          .filter(
-                            (bet) => bet.id === individualExtraPicker.betId,
-                          )
-                          .map((bet) => bet.game.id)),
-                      ]
-                    : []
+                : picker === "cellExtra" || picker === "individualExtra"
+                  ? hedgePickerBlock.ids
+                  : []
+        }
+        disabledReasons={
+          picker === "cellExtra" || picker === "individualExtra"
+            ? hedgePickerBlock.reasons
+            : undefined
         }
         emptyLabel="No matches match that team or date"
         mode="select"

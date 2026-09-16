@@ -55,6 +55,7 @@ type GameSelectModalProps = {
   buckets: IdentifiedGames;
   selectedId?: string;
   disabledIds?: string[];
+  disabledReasons?: Record<string, string>;
   emptyLabel?: string;
   mode?: "select" | "classify";
   initialBucket?: GameClass | "all";
@@ -232,6 +233,7 @@ export default function GameSelectModal({
   buckets,
   selectedId,
   disabledIds = [],
+  disabledReasons = {},
   emptyLabel = "No matches found",
   mode = "select",
   initialBucket = "all",
@@ -518,14 +520,21 @@ export default function GameSelectModal({
                         </p>
                       </div>
                       {mode === "select" ? (
-                        <button
-                          type="button"
-                          disabled={disabled}
-                          onClick={() => onSelect?.(game)}
-                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:disabled:bg-zinc-700"
-                        >
-                          {selected ? "Selected" : "Select"}
-                        </button>
+                        <div className="shrink-0 text-right">
+                          <button
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => onSelect?.(game)}
+                            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:disabled:bg-zinc-700"
+                          >
+                            {selected ? "Selected" : "Select"}
+                          </button>
+                          {disabled && disabledReasons[game.id] ? (
+                            <p className="mt-1 max-w-40 text-[10px] leading-tight text-zinc-500 dark:text-zinc-400">
+                              {disabledReasons[game.id]}
+                            </p>
+                          ) : null}
+                        </div>
                       ) : null}
                     </div>
                     <GameDetails game={game} />
