@@ -239,10 +239,6 @@ function completePairCount(
   return count;
 }
 
-function pairIds(pair: ExtraPairIds) {
-  return [pair.aId, pair.bId].filter(Boolean);
-}
-
 function extraLegsProduct(legs: ExtraLeg[]) {
   return legs.reduce((product, leg) => product * leg.game[leg.market], 1);
 }
@@ -581,15 +577,19 @@ export default function Home() {
     }
     return pairs;
   }, [anchorA, anchorB, extraPairGames]);
-  const usedAnchorIds = useMemo(
-    () =>
-      [anchorAId, anchorBId, ...extraPairs.flatMap(pairIds)].filter(Boolean),
-    [anchorAId, anchorBId, extraPairs],
-  );
-  const availableExtraAnchors = useMemo(
-    () => visibleAllGames.filter((game) => !usedAnchorIds.includes(game.id)),
-    [visibleAllGames, usedAnchorIds],
-  );
+  const samePairBlockedIds = useMemo(() => {
+    const otherId =
+      picker === "anchorA"
+        ? anchorBId
+        : picker === "anchorB"
+          ? anchorAId
+          : picker === "extraAnchor" && extraPairPicker
+            ? extraPairs[extraPairPicker.index]?.[
+                extraPairPicker.slot === "a" ? "bId" : "aId"
+              ]
+            : "";
+    return otherId ? [otherId] : [];
+  }, [anchorAId, anchorBId, extraPairPicker, extraPairs, picker]);
   const hedgePickerBlock = useMemo(() => {
     const target =
       picker === "cellExtra"
@@ -924,29 +924,12 @@ export default function Home() {
     setExtraLegs((legs) => scaleFailsafe(legs, toCount / fromCount));
   };
 
-  const dropGameFromExtraPairs = (
-    gameId: string,
-    nextBaseAId: string,
-    nextBaseBId: string,
-  ) => {
-    const nextExtras = extraPairs.map((pair) => ({
-      aId: pair.aId === gameId ? "" : pair.aId,
-      bId: pair.bId === gameId ? "" : pair.bId,
-    }));
-    const oldCount = completePairCount(anchorAId, anchorBId, extraPairs);
-    const newCount = completePairCount(nextBaseAId, nextBaseBId, nextExtras);
-    setExtraPairs(nextExtras);
-    rescaleFailsafe(oldCount, newCount);
-  };
-
   const handlePickerSelect = (game: FormattedGame) => {
     if (picker === "anchorA") {
-      dropGameFromExtraPairs(game.id, game.id, anchorBId);
       setAnchorAId(game.id);
       setCellAmounts({});
       setCurrentPage(1);
     } else if (picker === "anchorB") {
-      dropGameFromExtraPairs(game.id, anchorAId, game.id);
       setAnchorBId(game.id);
       setCellAmounts({});
       setCurrentPage(1);
@@ -1409,7 +1392,7 @@ export default function Home() {
                             games?.a
                               ? oddsDetail(games.a)
                               : visibleAllGames.length
-                                ? `${availableExtraAnchors.length} matches available`
+                                ? `${visibleAllGames.length} matches available`
                                 : "Add a match to get started"
                           }
                           onClick={() => openExtraPairPicker(index, "a")}
@@ -1429,7 +1412,7 @@ export default function Home() {
                             games?.b
                               ? oddsDetail(games.b)
                               : visibleAllGames.length
-                                ? `${availableExtraAnchors.length} matches available`
+                                ? `${visibleAllGames.length} matches available`
                                 : "Add a match to get started"
                           }
                           onClick={() => openExtraPairPicker(index, "b")}
@@ -1443,7 +1426,7 @@ export default function Home() {
                 type="button"
                 className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-blue-400 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                 onClick={addExtraPair}
-                disabled={availableExtraAnchors.length < 2}
+                disabled={visibleAllGames.length < 2}
               >
                 <Plus size={16} />
                 Add anchor pair
@@ -2132,8 +2115,10 @@ export default function Home() {
         description={
           picker === "individual"
             ? "Search by team name and add a single that stays off the opening book."
-            : picker === "extraAnchor"
-              ? "A match already used as an anchor cannot be picked again, but teams from one pair can be reused in another pair."
+            : picker === "anchorA" ||
+                picker === "anchorB" ||
+                picker === "extraAnchor"
+              ? "The same match can be reused in another pair. The two anchors in this pair must be different matches."
               : picker === "cellExtra" && cellExtraPicker
                 ? `This hedge only multiplies ${extraLegTargetLabel(
                     cellExtraPicker,
@@ -2167,29 +2152,27 @@ export default function Home() {
                   : undefined
         }
         disabledIds={
-          picker === "anchorA"
-            ? usedAnchorIds.filter((id) => id !== anchorAId)
-            : picker === "anchorB"
-              ? usedAnchorIds.filter((id) => id !== anchorBId)
-              : picker === "extraAnchor"
-                ? usedAnchorIds.filter((id) => {
-                    if (!extraPairPicker) {
-                      return true;
-                    }
-                    const currentId =
-                      extraPairs[extraPairPicker.index]?.[
-                        extraPairPicker.slot === "a" ? "aId" : "bId"
-                      ];
-                    return id !== currentId;
-                  })
-                : picker === "cellExtra" || picker === "individualExtra"
-                  ? hedgePickerBlock.ids
-                  : []
+          picker === "anchorA" ||
+          picker === "anchorB" ||
+          picker === "extraAnchor"
+            ? samePairBlockedIds
+            : picker === "cellExtra" || picker === "individualExtra"
+              ? hedgePickerBlock.ids
+              : []
         }
         disabledReasons={
           picker === "cellExtra" || picker === "individualExtra"
             ? hedgePickerBlock.reasons
-            : undefined
+            : picker === "anchorA" ||
+                picker === "anchorB" ||
+                picker === "extraAnchor"
+              ? Object.fromEntries(
+                  samePairBlockedIds.map((id) => [
+                    id,
+                    "Already the other anchor in this pair",
+                  ]),
+                )
+              : undefined
         }
         emptyLabel="No matches match that team or date"
         mode="select"
