@@ -51,26 +51,30 @@ import {
   Trash2,
 } from "lucide-react";
 
-type ExtraCategory = "hedges" | "unicorns" | "others";
+type ExtraCategory = "hedges";
 type GamesSource = "idle" | "live" | "cache" | "error";
 type ExtraPairSlot = "a" | "b";
 type PickerTarget =
   | "anchorA"
   | "anchorB"
   | "extraAnchor"
-  | ExtraCategory
   | "individual"
-  | "cellExtra";
+  | "cellExtra"
+  | "individualExtra";
 
-type ExtraLegTarget = {
+type CellExtraTarget = {
+  kind: "cell";
   aId: string;
   bId: string;
   markets: MarketKey[];
 };
 
-type CellExtraPicker = ExtraLegTarget & {
-  category: Exclude<ExtraCategory, "others">;
+type IndividualExtraTarget = {
+  kind: "individual";
+  betId: string;
 };
+
+type ExtraLegTarget = CellExtraTarget | IndividualExtraTarget;
 
 type ExtraPairIds = {
   aId: string;
@@ -84,7 +88,7 @@ type ExtraPairPicker = {
 
 type ExtraLeg = {
   id: string;
-  category: Exclude<ExtraCategory, "others">;
+  category: ExtraCategory;
   game: FormattedGame;
   market: MarketKey;
   failsafe: {
@@ -104,10 +108,17 @@ type OpeningTicket = AnchorCombo & {
   extraLegs: ExtraLeg[];
 };
 
+type IndividualTicket = IndividualBet & {
+  boosted: boolean;
+  baseOdds: number;
+  extraMultiplier: number;
+  extraLegs: ExtraLeg[];
+};
+
 type FailsafeTicket = {
   id: string;
   legId: string;
-  category: Exclude<ExtraCategory, "others">;
+  category: ExtraCategory;
   game: FormattedGame;
   market: "d" | "l";
   amount: number;
@@ -129,11 +140,7 @@ const MARKET_TITLES: Record<MarketKey, string> = {
   l: "Loss",
 };
 
-const EXTRA_TITLES: Record<ExtraCategory, string> = {
-  hedges: "Hedges",
-  unicorns: "Unicorns",
-  others: "Others",
-};
+const HEDGE_LABEL = "Hedge";
 
 function SlipLeg({
   label,
@@ -311,15 +318,29 @@ function ticketMatchesTarget(
   pair: AnchorPair,
   target: ExtraLegTarget,
 ) {
-  return extraTargetEquals(target, {
-    aId: pair.a.id,
-    bId: pair.b.id,
-    markets: ticket.markets,
-  });
+  return (
+    target.kind === "cell" &&
+    extraTargetEquals(target, {
+      kind: "cell",
+      aId: pair.a.id,
+      bId: pair.b.id,
+      markets: ticket.markets,
+    })
+  );
 }
 
 function extraTargetEquals(a: ExtraLegTarget, b: ExtraLegTarget) {
+  if (a.kind !== b.kind) {
+    return false;
+  }
+
+  if (a.kind === "individual" && b.kind === "individual") {
+    return a.betId === b.betId;
+  }
+
   return (
+    a.kind === "cell" &&
+    b.kind === "cell" &&
     a.aId === b.aId &&
     a.bId === b.bId &&
     a.markets[0] === b.markets[0] &&
@@ -327,7 +348,19 @@ function extraTargetEquals(a: ExtraLegTarget, b: ExtraLegTarget) {
   );
 }
 
-function extraLegTargetLabel(target: ExtraLegTarget, pairs: AnchorPair[]) {
+function extraLegTargetLabel(
+  target: ExtraLegTarget,
+  pairs: AnchorPair[],
+  individualBets: IndividualBet[] = [],
+) {
+  if (target.kind === "individual") {
+    const bet = individualBets.find((item) => item.id === target.betId);
+    if (!bet) {
+      return "Individual";
+    }
+    return `Individual · ${MARKET_TITLES[bet.market]} · ${gameTitle(bet.game)}`;
+  }
+
   const pairIndex = pairs.findIndex(
     (pair) => pair.a.id === target.aId && pair.b.id === target.bId,
   );
@@ -343,11 +376,17 @@ function extraLegTargetLabel(target: ExtraLegTarget, pairs: AnchorPair[]) {
   return `${pairPrefix}${markets} · ${gameTitle(pair.a)} × ${gameTitle(pair.b)}`;
 }
 
-function CellExtraMarker({ label }: { label: string }) {
+function ExtraTargetMarker({
+  kind,
+  label,
+}: {
+  kind: ExtraLegTarget["kind"];
+  label: string;
+}) {
   return (
     <div className="mt-2">
       <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-        Cell
+        {kind === "cell" ? "Cell" : "Individual"}
       </span>
       <p className="mt-1 text-xs leading-snug text-zinc-500 dark:text-zinc-400">
         {label}
@@ -361,13 +400,19 @@ function scaleFailsafe(legs: ExtraLeg[], factor: number): ExtraLeg[] {
     return legs;
   }
 
-  return legs.map((leg) => ({
-    ...leg,
-    failsafe: {
-      d: roundMoney(leg.failsafe.d * factor),
-      l: roundMoney(leg.failsafe.l * factor),
-    },
-  }));
+  return legs.map((leg) => {
+    if (leg.target?.kind === "individual") {
+      return leg;
+    }
+
+    return {
+      ...leg,
+      failsafe: {
+        d: roundMoney(leg.failsafe.d * factor),
+        l: roundMoney(leg.failsafe.l * factor),
+      },
+    };
+  });
 }
 
 export default function Home() {
@@ -382,11 +427,11 @@ export default function Home() {
   const [extraPairPicker, setExtraPairPicker] =
     useState<ExtraPairPicker | null>(null);
   const [cellExtraPicker, setCellExtraPicker] =
-    useState<CellExtraPicker | null>(null);
+    useState<CellExtraTarget | null>(null);
+  const [individualExtraPicker, setIndividualExtraPicker] =
+    useState<IndividualExtraTarget | null>(null);
   const [cellAmounts, setCellAmounts] = useState<Record<string, number>>({});
   const [extraLegs, setExtraLegs] = useState<ExtraLeg[]>([]);
-  const [extraCategory, setExtraCategory] = useState<ExtraCategory>("hedges");
-  const [extraGameId, setExtraGameId] = useState("");
   const [individualBets, setIndividualBets] = useState<IndividualBet[]>([]);
   const [individualGameId, setIndividualGameId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -438,20 +483,7 @@ export default function Home() {
       ]),
     [visibleGames],
   );
-  const extraGames = useMemo(() => {
-    if (extraCategory === "others") {
-      return sortGames(visibleGames.others);
-    }
-    return visibleAllGames;
-  }, [extraCategory, visibleAllGames, visibleGames.others]);
 
-  const selectedExtraGame = useMemo(
-    () =>
-      extraGames.find((game) => game.id === extraGameId) ??
-      extraGames[0] ??
-      null,
-    [extraGames, extraGameId],
-  );
   const selectedIndividualGame = useMemo(
     () =>
       visibleAllGames.find((game) => game.id === individualGameId) ??
@@ -513,11 +545,17 @@ export default function Home() {
     const pairKeys = new Set(
       resolvedPairs.map((pair) => `${pair.a.id}|${pair.b.id}`),
     );
-    return extraLegs.filter(
-      (leg) =>
-        !leg.target || pairKeys.has(`${leg.target.aId}|${leg.target.bId}`),
-    );
-  }, [extraLegs, resolvedPairs]);
+    const individualIds = new Set(individualBets.map((bet) => bet.id));
+    return extraLegs.filter((leg) => {
+      if (!leg.target) {
+        return true;
+      }
+      if (leg.target.kind === "cell") {
+        return pairKeys.has(`${leg.target.aId}|${leg.target.bId}`);
+      }
+      return individualIds.has(leg.target.betId);
+    });
+  }, [extraLegs, individualBets, resolvedPairs]);
   const globalExtraLegs = useMemo(
     () => activeExtraLegs.filter((leg) => !leg.target),
     [activeExtraLegs],
@@ -527,7 +565,8 @@ export default function Home() {
     [globalExtraLegs],
   );
   const cellExtraCount = useMemo(
-    () => activeExtraLegs.filter((leg) => Boolean(leg.target)).length,
+    () =>
+      activeExtraLegs.filter((leg) => leg.target?.kind === "cell").length,
     [activeExtraLegs],
   );
   const failsafeLegs = useMemo(() => {
@@ -545,7 +584,7 @@ export default function Home() {
         if (!leg.target) {
           return applyGlobal;
         }
-        return pair ? ticketMatchesTarget(combo, pair, leg.target) : false;
+        return pair && ticketMatchesTarget(combo, pair, leg.target);
       });
       const multiplier = extraLegsProduct(attached);
       const boosted = attached.length > 0;
@@ -599,12 +638,32 @@ export default function Home() {
     [failsafeTickets],
   );
 
-  const individualTickets = useMemo(
+  const individualTickets = useMemo<IndividualTicket[]>(
     () =>
-      individualBets.map((bet) =>
-        createIndividualBet(bet.game, bet.market, bet.amount, bet.id),
-      ),
-    [individualBets],
+      individualBets.map((bet) => {
+        const attached = activeExtraLegs.filter(
+          (leg) =>
+            leg.target?.kind === "individual" && leg.target.betId === bet.id,
+        );
+        const multiplier = extraLegsProduct(attached);
+        const base = createIndividualBet(
+          bet.game,
+          bet.market,
+          bet.amount,
+          bet.id,
+        );
+        const odds = base.odds * multiplier;
+        return {
+          ...base,
+          boosted: attached.length > 0,
+          baseOdds: base.odds,
+          odds,
+          returnValue: base.amount * odds,
+          extraMultiplier: multiplier,
+          extraLegs: attached,
+        };
+      }),
+    [activeExtraLegs, individualBets],
   );
 
   const individualStake = useMemo(
@@ -668,24 +727,24 @@ export default function Home() {
   };
 
   const addExtraLeg = (
-    game = selectedExtraGame,
-    category = extraCategory,
-    target?: ExtraLegTarget,
+    game: FormattedGame | null | undefined,
+    target: ExtraLegTarget,
+    failsafeStake = failsafeDefault,
   ) => {
-    if (!game || category === "others") {
+    if (!game) {
       return;
     }
 
     setExtraLegs((prev) => [
       ...prev,
       {
-        id: `${category}-${game.id}-${Date.now()}-${Math.random()
+        id: `hedges-${game.id}-${Date.now()}-${Math.random()
           .toString(16)
           .slice(2)}`,
-        category,
+        category: "hedges",
         game,
         market: "w",
-        failsafe: { d: failsafeDefault, l: failsafeDefault },
+        failsafe: { d: failsafeStake, l: failsafeStake },
         target,
       },
     ]);
@@ -734,17 +793,16 @@ export default function Home() {
 
   const removeIndividualBet = (id: string) => {
     setIndividualBets((prev) => prev.filter((bet) => bet.id !== id));
+    setExtraLegs((prev) =>
+      prev.filter(
+        (leg) =>
+          !(leg.target?.kind === "individual" && leg.target.betId === id),
+      ),
+    );
   };
 
   const classifyOther = (game: FormattedGame, bucket: GameBucket) => {
     setOverrides((current) => ({ ...current, [game.id]: bucket }));
-    if (bucket === "anchors") {
-      setPicker(null);
-      return;
-    }
-
-    setExtraCategory(bucket);
-    setExtraGameId(game.id);
     setPicker(null);
   };
 
@@ -798,15 +856,12 @@ export default function Home() {
       setCellAmounts({});
       setCurrentPage(1);
       setExtraPairPicker(null);
-    } else if (picker === "hedges" || picker === "unicorns") {
-      setExtraGameId(game.id);
     } else if (picker === "cellExtra" && cellExtraPicker) {
-      addExtraLeg(game, cellExtraPicker.category, {
-        aId: cellExtraPicker.aId,
-        bId: cellExtraPicker.bId,
-        markets: cellExtraPicker.markets,
-      });
+      addExtraLeg(game, cellExtraPicker);
       setCellExtraPicker(null);
+    } else if (picker === "individualExtra" && individualExtraPicker) {
+      addExtraLeg(game, individualExtraPicker, FAILSAFE_DEFAULT_STAKE);
+      setIndividualExtraPicker(null);
     } else if (picker === "individual") {
       setIndividualGameId(game.id);
     }
@@ -832,18 +887,22 @@ export default function Home() {
     setPicker("extraAnchor");
   };
 
-  const openCellExtraPicker = (
-    pair: AnchorPair,
-    markets: MarketKey[],
-    category: Exclude<ExtraCategory, "others">,
-  ) => {
+  const openCellExtraPicker = (pair: AnchorPair, markets: MarketKey[]) => {
     setCellExtraPicker({
+      kind: "cell",
       aId: pair.a.id,
       bId: pair.b.id,
       markets,
-      category,
     });
     setPicker("cellExtra");
+  };
+
+  const openIndividualExtraPicker = (betId: string) => {
+    setIndividualExtraPicker({
+      kind: "individual",
+      betId,
+    });
+    setPicker("individualExtra");
   };
 
   const updateExtraMarket = (id: string, market: MarketKey) => {
@@ -867,9 +926,7 @@ export default function Home() {
       : 0;
     setExtraLegs((prev) => {
       const matchingLegs = prev.filter(
-        (leg) =>
-          failsafeLegKey(leg) === id ||
-          leg.id === id,
+        (leg) => failsafeLegKey(leg) === id || leg.id === id,
       );
       const editableLegs = matchingLegs.filter((leg) =>
         failsafeMarketsFor(leg.market).includes(market),
@@ -902,6 +959,7 @@ export default function Home() {
     setExtraPairs([]);
     setExtraPairPicker(null);
     setCellExtraPicker(null);
+    setIndividualExtraPicker(null);
     setCellAmounts({});
     setExtraLegs([]);
     setIndividualBets([]);
@@ -923,7 +981,6 @@ export default function Home() {
         }))
         .filter((pair) => pair.aId || pair.bId),
     );
-    setExtraGameId((current) => (hasGame(current) ? current : firstId));
     setIndividualGameId((current) => (hasGame(current) ? current : firstId));
   };
 
@@ -988,19 +1045,6 @@ export default function Home() {
     }
   };
 
-  const handleExtraCategoryChange = (nextCategory: ExtraCategory) => {
-    setExtraCategory(nextCategory);
-    if (nextCategory === "others") {
-      return;
-    }
-
-    setExtraGameId((current) =>
-      current && visibleAllGames.some((game) => game.id === current)
-        ? current
-        : (visibleAllGames[0]?.id ?? ""),
-    );
-  };
-
   return (
     <div
       className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100"
@@ -1020,7 +1064,7 @@ export default function Home() {
             <h1 className="text-2xl font-bold">Betting Strategy Analyzer</h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Each pair of anchors creates 9 opening odds. Extra pairs share the
-              same hedges and unicorns.
+              same hedges.
             </p>
             <p className="mt-1 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
               {isBusy ? (
@@ -1036,9 +1080,9 @@ export default function Home() {
                   ? "Live SportPesa matches loaded"
                   : gamesSource === "cache"
                     ? "Using cached SportPesa matches"
-                  : gamesSource === "error"
-                    ? loadError || "Could not load SportPesa matches"
-                    : "Click Refresh to load SportPesa.com matches"}
+                    : gamesSource === "error"
+                      ? loadError || "Could not load SportPesa matches"
+                      : "Click Refresh to load SportPesa.com matches"}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1135,7 +1179,9 @@ export default function Home() {
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                   Bet Builder
                 </div>
-                <h2 className="mt-1 text-2xl font-bold">Single & Multibet Builder</h2>
+                <h2 className="mt-1 text-2xl font-bold">
+                  Single & Multibet Builder
+                </h2>
               </div>
               <button
                 onClick={clearBuilder}
@@ -1163,6 +1209,15 @@ export default function Home() {
                   onChange={setDateFilter}
                 />
               )}
+            </div>
+
+            <div className="mt-8 border-t border-zinc-200 py-6 dark:border-zinc-800">
+              <h3 className="text-lg font-bold">Multibet builder</h3>
+
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                Multibets boost anchors. Stake and return count in the slip
+                totals.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1295,8 +1350,8 @@ export default function Home() {
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       {pairCount} pair{pairCount === 1 ? "" : "s"} ·{" "}
                       {COVER_MULTIPLIER} tickets each · {coverMultiplier}×
-                      cover. Shared hedges and unicorns apply to every pair.
-                      Cell extras only multiply that cell.
+                      cover. Shared hedges apply to every pair. Cell hedges only
+                      multiply that cell.
                     </p>
                   </div>
                   {(globalExtraLegs.length > 0 || cellExtraCount > 0) && (
@@ -1345,154 +1400,15 @@ export default function Home() {
             ) : (
               <div className="mt-6 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
                 Choose two different anchors to create the opening odds. Add
-                another pair to book a second 3×3 that shares the same hedges
-                and unicorns.
+                another pair to book a second 3×3 that shares the same hedges.
               </div>
             )}
 
-            <div className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-              <h3 className="text-lg font-bold">
-                Add a hedge, unicorn, or other
-              </h3>
+<div className="mt-8 border-t border-zinc-200 py-6 dark:border-zinc-800">
+              <h3 className="text-lg font-bold">Single bet builder</h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Extra legs without a cell marker apply only when an opening
-                ticket is below {coverMultiplier}×. Add a hedge or unicorn from
-                a grid cell to multiply that cell only; those extras are marked
-                with the anchor teams. You can pick any match as a hedge or
-                unicorn. Others are matches the auto-rules did not classify.
-              </p>
-
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
-                    Category
-                  </span>
-                  <select
-                    value={extraCategory}
-                    onChange={(e) =>
-                      handleExtraCategoryChange(e.target.value as ExtraCategory)
-                    }
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                  >
-                    {Object.entries(EXTRA_TITLES).map(([key, value]) => (
-                      <option key={key} value={key}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <div>
-                  <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
-                    Team selection
-                  </span>
-                  <PickerButton
-                    label={
-                      extraCategory === "others"
-                        ? "Search unclassified matches"
-                        : selectedExtraGame
-                          ? gameTitle(selectedExtraGame)
-                          : `Search and choose a ${EXTRA_TITLES[extraCategory].slice(0, -1).toLowerCase()}`
-                    }
-                    detail={
-                      extraCategory === "others"
-                        ? `${visibleGames.others.length} matches not auto-classified`
-                        : selectedExtraGame
-                          ? oddsDetail(selectedExtraGame)
-                          : extraGames.length
-                            ? `${extraGames.length} matches available`
-                            : "Add a match to get started"
-                    }
-                    onClick={() => setPicker(extraCategory)}
-                  />
-                </div>
-              </div>
-
-              {extraCategory === "others" ? (
-                <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
-                  Classify an unclassified match as an anchor, hedge, or
-                  unicorn. Hedges and unicorns stay selected here so you can add
-                  them next.
-                </p>
-              ) : (
-                <button
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:disabled:bg-zinc-700"
-                  onClick={() => addExtraLeg()}
-                  disabled={!selectedExtraGame}
-                >
-                  <Plus size={16} />
-                  Add {EXTRA_TITLES[extraCategory].slice(0, -1)}
-                </button>
-              )}
-
-              {activeExtraLegs.length > 0 && (
-                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {activeExtraLegs.map((leg) => (
-                    <div key={leg.id} className="bet-builder-card">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                            {EXTRA_TITLES[leg.category].slice(0, -1)}
-                          </div>
-                          <h4 className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-50">
-                            {gameTitle(leg.game)}
-                          </h4>
-                          {leg.target ? (
-                            <CellExtraMarker
-                              label={extraLegTargetLabel(
-                                leg.target,
-                                resolvedPairs,
-                              )}
-                            />
-                          ) : null}
-                          {formatKickoff(leg.game) ? (
-                            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                              {formatKickoff(leg.game)}
-                            </p>
-                          ) : null}
-                        </div>
-                        <button
-                          className="rounded-md p-1.5 text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/30"
-                          onClick={() => removeExtraLeg(leg.id)}
-                          aria-label={`Remove ${gameTitle(leg.game)}`}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        {MARKET_KEYS.map((key) => (
-                          <button
-                            key={`${leg.id}-${key}`}
-                            type="button"
-                            onClick={() => updateExtraMarket(leg.id, key)}
-                            className={`bet-multiplier-toggle ${leg.market === key ? "selected" : ""}`}
-                          >
-                            {key.toUpperCase()}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="mt-2 grid grid-cols-3 gap-2">
-                        {MARKET_KEYS.map((key) => (
-                          <div
-                            key={`${leg.id}-${key}-value`}
-                            className="bet-multiplier-value"
-                          >
-                            {leg.game[key].toFixed(2)}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-              <h3 className="text-lg font-bold">Add an individual bet</h3>
-              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Singles sit outside the opening book. They do not boost anchors.
-                Stake and return still count in the slip totals.
+                Singles can take their own hedges. Stake and return count in the
+                slip totals.
               </p>
 
               <div className="mt-4">
@@ -1531,8 +1447,15 @@ export default function Home() {
                     <div key={bet.id} className="bet-builder-card">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                            Individual
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                              Individual
+                            </div>
+                            {bet.boosted ? (
+                              <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                                Boosted
+                              </span>
+                            ) : null}
                           </div>
                           <h4 className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-50">
                             {gameTitle(bet.game)}
@@ -1574,6 +1497,29 @@ export default function Home() {
                           </div>
                         ))}
                       </div>
+                      {bet.extraLegs.length > 0 ? (
+                        <div className="mt-2 space-y-1">
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {[
+                              bet.baseOdds.toFixed(2),
+                              ...bet.extraLegs.map((leg) =>
+                                leg.game[leg.market].toFixed(2),
+                              ),
+                            ].join(" × ")}
+                          </div>
+                          {bet.extraLegs.map((leg) => (
+                            <div
+                              key={leg.id}
+                              className="truncate text-[10px] text-amber-800 dark:text-amber-300"
+                              title={gameTitle(leg.game)}
+                            >
+                              {HEDGE_LABEL} ·{" "}
+                              {leg.game.originalData.home_team}{" "}
+                              {leg.game[leg.market].toFixed(2)}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                       <label className="mt-3 block">
                         <span className="mb-1 block text-[10px] uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
                           Stake
@@ -1590,10 +1536,97 @@ export default function Home() {
                         />
                       </label>
                       <div className="mt-2 flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
+                        <span>Odds</span>
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                          {bet.odds.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
                         <span>Return</span>
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                           ${bet.returnValue.toFixed(2)}
                         </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openIndividualExtraPicker(bet.id)}
+                        className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-lg border border-zinc-200 bg-white px-1.5 py-1.5 text-[10px] font-semibold text-zinc-600 transition hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                      >
+                        <Plus size={10} />
+                        Hedge
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+              <h3 className="text-lg font-bold">Hedges</h3>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                Add a hedge from a grid cell or an individual bet to multiply
+                that ticket only. Shared hedges apply to every pair. You can
+                pick any match as a hedge.
+              </p>
+
+              {activeExtraLegs.length > 0 && (
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {activeExtraLegs.map((leg) => (
+                    <div key={leg.id} className="bet-builder-card">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                            {HEDGE_LABEL}
+                          </div>
+                          <h4 className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                            {gameTitle(leg.game)}
+                          </h4>
+                          {leg.target ? (
+                            <ExtraTargetMarker
+                              kind={leg.target.kind}
+                              label={extraLegTargetLabel(
+                                leg.target,
+                                resolvedPairs,
+                                individualBets,
+                              )}
+                            />
+                          ) : null}
+                          {formatKickoff(leg.game) ? (
+                            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                              {formatKickoff(leg.game)}
+                            </p>
+                          ) : null}
+                        </div>
+                        <button
+                          className="rounded-md p-1.5 text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/30"
+                          onClick={() => removeExtraLeg(leg.id)}
+                          aria-label={`Remove ${gameTitle(leg.game)}`}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        {MARKET_KEYS.map((key) => (
+                          <button
+                            key={`${leg.id}-${key}`}
+                            type="button"
+                            onClick={() => updateExtraMarket(leg.id, key)}
+                            className={`bet-multiplier-toggle ${leg.market === key ? "selected" : ""}`}
+                          >
+                            {key.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        {MARKET_KEYS.map((key) => (
+                          <div
+                            key={`${leg.id}-${key}-value`}
+                            className="bet-multiplier-value"
+                          >
+                            {leg.game[key].toFixed(2)}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
@@ -1647,9 +1680,9 @@ export default function Home() {
                           <SlipLeg
                             key={`${ticket.id}-${leg.id}-${market}`}
                             label={
-                              leg.target
-                                ? `${EXTRA_TITLES[leg.category].slice(0, -1)} cell`
-                                : EXTRA_TITLES[leg.category].slice(0, -1)
+                              leg.target?.kind === "cell"
+                                ? `${HEDGE_LABEL} cell`
+                                : HEDGE_LABEL
                             }
                             game={leg.game}
                             market={market}
@@ -1669,10 +1702,11 @@ export default function Home() {
               {betslipTickets.length === 0 &&
                 betslipFailsafeTickets.length === 0 &&
                 betslipIndividualTickets.length === 0 && (
-                <p className="py-6 text-sm text-zinc-400">
-                  The opening tickets appear here after both anchors are chosen.
-                </p>
-              )}
+                  <p className="py-6 text-sm text-zinc-400">
+                    The opening tickets appear here after both anchors are
+                    chosen.
+                  </p>
+                )}
             </div>
 
             {betslipTickets.length > itemsPerPage && (
@@ -1709,7 +1743,7 @@ export default function Home() {
                 {betslipFailsafeTickets.map((ticket) => (
                   <div key={ticket.id} className="betslip-card">
                     <SlipLeg
-                      label={`${EXTRA_TITLES[ticket.category].slice(0, -1)} failsafe`}
+                      label={`${HEDGE_LABEL} failsafe`}
                       game={ticket.game}
                       market={ticket.market}
                     />
@@ -1730,11 +1764,28 @@ export default function Home() {
                 </div>
                 {betslipIndividualTickets.map((ticket) => (
                   <div key={ticket.id} className="betslip-card">
-                    <SlipLeg
-                      label="Individual"
-                      game={ticket.game}
-                      market={ticket.market}
-                    />
+                    <div className="mb-2 flex items-center justify-end">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+                        {ticket.boosted ? "Boosted" : "Individual"}
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <SlipLeg
+                        label="Individual"
+                        game={ticket.game}
+                        market={ticket.market}
+                      />
+                      {aggregateTicketExtraLegs(ticket.extraLegs).map((leg) =>
+                        leg.markets.map((market) => (
+                          <SlipLeg
+                            key={`${ticket.id}-${leg.id}-${market}`}
+                            label={HEDGE_LABEL}
+                            game={leg.game}
+                            market={market}
+                          />
+                        )),
+                      )}
+                    </div>
                     <SlipPayout
                       stake={ticket.amount}
                       odds={ticket.odds}
@@ -1781,7 +1832,7 @@ export default function Home() {
                 </div>
                 <h2 className="mt-1 text-2xl font-bold">Draw and loss cover</h2>
                 <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  If a hedge or unicorn misses, boosted tickets pay nothing.
+                  If a hedge misses, boosted tickets pay nothing.
                   Either draw or loss still hits, and that failsafe is a given
                   in the payout group. Each side starts at $
                   {failsafeDefault.toFixed(2)}
@@ -1807,7 +1858,7 @@ export default function Home() {
                 return (
                   <div key={`${leg.id}-failsafe`} className="bet-builder-card">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                      {EXTRA_TITLES[leg.category].slice(0, -1)} failsafe
+                      {HEDGE_LABEL} failsafe
                     </div>
                     <h3 className="mt-1 text-base font-bold text-zinc-900 dark:text-zinc-50">
                       {gameTitle(leg.game)}
@@ -1963,31 +2014,30 @@ export default function Home() {
                 : picker === "individual"
                   ? "Choose an individual bet"
                   : picker === "cellExtra"
-                    ? `Add a ${
-                        cellExtraPicker
-                          ? EXTRA_TITLES[cellExtraPicker.category]
-                              .slice(0, -1)
-                              .toLowerCase()
-                          : "extra"
-                      } to this cell`
-                    : picker === "others"
-                      ? "Unclassified matches"
-                      : `Choose a ${picker ? EXTRA_TITLES[picker].slice(0, -1).toLowerCase() : "match"}`
+                    ? "Add a hedge to this cell"
+                    : picker === "individualExtra"
+                      ? "Add a hedge to this individual bet"
+                      : "Choose a match"
         }
         description={
-          picker === "others"
-            ? "Search by team name, then classify a match as an anchor, hedge, or unicorn."
-            : picker === "individual"
-              ? "Search by team name and add a single that stays off the opening book."
-              : picker === "cellExtra" && cellExtraPicker
-                ? `This extra only multiplies ${extraLegTargetLabel(
-                    cellExtraPicker,
+          picker === "individual"
+            ? "Search by team name and add a single that stays off the opening book."
+            : picker === "cellExtra" && cellExtraPicker
+              ? `This hedge only multiplies ${extraLegTargetLabel(
+                  cellExtraPicker,
+                  resolvedPairs,
+                  individualBets,
+                )}.`
+              : picker === "individualExtra" && individualExtraPicker
+                ? `This hedge only multiplies ${extraLegTargetLabel(
+                    individualExtraPicker,
                     resolvedPairs,
+                    individualBets,
                   )}.`
                 : "Every match is listed. Search by team name and review the 1X2 and strategy odds before selecting."
         }
         buckets={visibleGames}
-        initialBucket={picker === "others" ? "others" : "all"}
+        initialBucket="all"
         onAddMatch={addManualMatch}
         selectedId={
           picker === "anchorA"
@@ -2002,9 +2052,7 @@ export default function Home() {
                   : undefined
                 : picker === "individual"
                   ? individualGameId
-                  : picker === "cellExtra"
-                    ? undefined
-                    : extraGameId
+                  : undefined
         }
         disabledIds={
           picker === "anchorA"
@@ -2030,14 +2078,28 @@ export default function Home() {
                           extraTargetEquals(leg.target, cellExtraPicker),
                       )
                       .map((leg) => leg.game.id)
-                  : []
+                  : picker === "individualExtra" && individualExtraPicker
+                    ? [
+                        ...activeExtraLegs
+                          .filter(
+                            (leg) =>
+                              leg.target &&
+                              extraTargetEquals(
+                                leg.target,
+                                individualExtraPicker,
+                              ),
+                          )
+                          .map((leg) => leg.game.id),
+                        ...(individualBets
+                          .filter(
+                            (bet) => bet.id === individualExtraPicker.betId,
+                          )
+                          .map((bet) => bet.game.id)),
+                      ]
+                    : []
         }
-        emptyLabel={
-          picker === "others"
-            ? "No unclassified matches match that team or date"
-            : "No matches match that team or date"
-        }
-        mode={picker === "others" ? "classify" : "select"}
+        emptyLabel="No matches match that team or date"
+        mode="select"
         dateFilter={dateFilter}
         dates={matchDates}
         onDateFilterChange={setDateFilter}
@@ -2045,6 +2107,7 @@ export default function Home() {
           setPicker(null);
           setExtraPairPicker(null);
           setCellExtraPicker(null);
+          setIndividualExtraPicker(null);
         }}
         onSelect={handlePickerSelect}
         onClassify={classifyOther}
@@ -2059,11 +2122,7 @@ type CoverMatrixProps = {
   tickets: OpeningTicket[];
   coverMultiplier: number;
   onStakeChange: (id: string, value: string) => void;
-  onAddCellExtra: (
-    pair: AnchorPair,
-    markets: MarketKey[],
-    category: Exclude<ExtraCategory, "others">,
-  ) => void;
+  onAddCellExtra: (pair: AnchorPair, markets: MarketKey[]) => void;
 };
 
 function CoverMatrix({
@@ -2127,7 +2186,9 @@ function CoverMatrix({
               if (!ticket) {
                 return null;
               }
-              const cellExtras = ticket.extraLegs.filter((leg) => leg.target);
+              const cellExtras = ticket.extraLegs.filter(
+                (leg) => leg.target?.kind === "cell",
+              );
 
               return (
                 <div
@@ -2164,7 +2225,7 @@ function CoverMatrix({
                           className="truncate text-[10px] text-amber-800 dark:text-amber-300"
                           title={gameTitle(leg.game)}
                         >
-                          {EXTRA_TITLES[leg.category].slice(0, -1)} ·{" "}
+                          {HEDGE_LABEL} ·{" "}
                           {leg.game.originalData.home_team}{" "}
                           {leg.game[leg.market].toFixed(2)}
                         </div>
@@ -2192,28 +2253,14 @@ function CoverMatrix({
                       ${ticket.returnValue.toFixed(2)}
                     </span>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onAddCellExtra(pair, ticket.markets, "hedges")
-                      }
-                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-zinc-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-zinc-600 transition hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-400 dark:hover:text-blue-300"
-                    >
-                      <Plus size={10} />
-                      Hedge
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onAddCellExtra(pair, ticket.markets, "unicorns")
-                      }
-                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-zinc-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-zinc-600 transition hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-400 dark:hover:text-blue-300"
-                    >
-                      <Plus size={10} />
-                      Unicorn
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onAddCellExtra(pair, ticket.markets)}
+                    className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-lg border border-zinc-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-zinc-600 transition hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                  >
+                    <Plus size={10} />
+                    Hedge
+                  </button>
                 </div>
               );
             })}
