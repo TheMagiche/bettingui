@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const dockerBuild = process.env.DOCKER_BUILD === "1";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
   serverExternalPackages: ["chrome-remote-interface", "@sparticuz/chromium"],
   ...(dockerBuild
     ? {
