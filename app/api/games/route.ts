@@ -1,4 +1,4 @@
-import { scrapeSportpesaGames } from "@/utils/sportpesaScraper";
+import { scrapeSportpesaGames } from "@/utils/scrapeSportpesa";
 import type { RawGame } from "@/utils/bettingLogic";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -23,7 +23,9 @@ let inflight: Promise<GamesPayload> | null = null;
 async function loadGames(): Promise<GamesPayload> {
   const games = await scrapeSportpesaGames();
   try {
-    await writeFile(CACHE_FILE, `${JSON.stringify(games, null, 2)}\n`, "utf8");
+    if (!process.env.VERCEL) {
+      await writeFile(CACHE_FILE, `${JSON.stringify(games, null, 2)}\n`, "utf8");
+    }
   } catch (error) {
     console.warn("Could not write games cache", error);
   }
@@ -80,10 +82,11 @@ async function getGames(fresh = false): Promise<GamesPayload> {
 
 export async function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
-  const fresh = searchParams.has("refresh");
+  const isVercel = Boolean(process.env.VERCEL);
+  const fresh = searchParams.has("refresh") && !isVercel;
 
   try {
-    if (searchParams.has("cache")) {
+    if (searchParams.has("cache") || isVercel) {
       const payload = await loadCachedGames();
       cached = {
         expiresAt: Date.now() + CACHE_TTL_MS,
@@ -98,7 +101,7 @@ export async function GET(request: Request) {
     return Response.json(
       {
         games: [],
-        source: "live",
+        source: "cache",
         fetchedAt: new Date().toISOString(),
         error: error instanceof Error ? error.message : "Live scrape failed",
       } satisfies GamesPayload,

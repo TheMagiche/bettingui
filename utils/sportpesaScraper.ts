@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -71,20 +72,37 @@ type SportpesaEvent = {
   markets?: SportpesaMarket[];
 };
 
+function firstExisting(paths: string[]) {
+  return paths.find((path) => existsSync(path));
+}
+
 function localChromePath() {
   if (process.env.CHROME_PATH) {
     return process.env.CHROME_PATH;
   }
 
   if (process.platform === "darwin") {
-    return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+    return (
+      firstExisting([
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+      ]) ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    );
   }
 
   if (process.platform === "win32") {
-    return "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+    return (
+      firstExisting([
+        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      ]) ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    );
   }
 
-  return "google-chrome";
+  return firstExisting(["/usr/bin/chromium", "/usr/bin/google-chrome"]) ?? "google-chrome";
 }
 
 function localChromeArgs() {
@@ -209,9 +227,14 @@ function mapEvent(event: SportpesaEvent): RawGame | null {
 
 async function launchChrome(port: number, userDataDir: string): Promise<ChildProcess> {
   const browser = await resolveBrowser();
-  const agent = userAgent();
+  if (browser.executablePath.includes("/") && !existsSync(browser.executablePath)) {
+    throw new Error(
+      `Chrome not found at ${browser.executablePath}. Set CHROME_PATH to a Chromium-based browser.`,
+    );
+  }
 
-  return spawn(
+  const agent = userAgent();
+  const chrome = spawn(
     /* turbopackIgnore: true */ browser.executablePath,
     [
       ...browser.args,
@@ -221,8 +244,10 @@ async function launchChrome(port: number, userDataDir: string): Promise<ChildPro
     ],
     {
       stdio: "ignore",
-    }
+    },
   );
+  chrome.on("error", () => undefined);
+  return chrome;
 }
 
 const FETCH_GAMES_SCRIPT = `
@@ -370,4 +395,18 @@ export async function scrapeSportpesaGames(): Promise<RawGame[]> {
     chrome.kill("SIGTERM");
     await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
   }
+}
+
+if (process.env.SPORTPESA_SCRAPE_CHILD === "1") {
+  scrapeSportpesaGames()
+    .then((games) => {
+      process.stdout.write(JSON.stringify(games));
+      process.exit(0);
+    })
+    .catch((error: unknown) => {
+      const message =
+        error instanceof Error ? error.message : "SportPesa scrape failed";
+      process.stderr.write(`${message}\n`);
+      process.exit(1);
+    });
 }

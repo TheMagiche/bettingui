@@ -46,6 +46,7 @@ RUN apt-get update \
 COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/utils/sportpesaScraper.ts ./utils/sportpesaScraper.ts
 
 USER node
 

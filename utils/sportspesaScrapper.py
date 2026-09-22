@@ -151,4 +151,13 @@ def scrape_sportpesa_dynamic():
 
 
 if __name__ == "__main__":
-    scrape_sportpesa_dynamic()
+    from pathlib import Path
+    games = scrape_sportpesa_dynamic()
+    if games:
+        output_file = Path(__file__).resolve().parent.parent / "public" / "betgames.json"
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(games, f, indent=2)
+            f.write("\n")
+        print(f"Successfully scraped and saved {len(games)} games to {output_file}")
+    else:
+        print("Scrape finished with 0 games.")

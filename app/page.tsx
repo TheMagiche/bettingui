@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   applyGameOverrides,
   availableDateKeys,
@@ -525,6 +525,9 @@ export default function Home() {
   const [dateFilter, setDateFilter] = useState(todayDateKey);
   const itemsPerPage = 9;
   const isBusy = isRefreshing;
+  const isVercel = Boolean(
+    process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NEXT_PUBLIC_IS_VERCEL,
+  );
 
   const classified = useMemo(
     () => mergeIdentifiedGames(fetchedClassified, identifyGames(manualGames)),
@@ -1127,56 +1130,64 @@ export default function Home() {
     return unique;
   };
 
-  const loadGames = async (source: "live" | "cache") => {
-    if (isBusy) {
-      return;
-    }
-
-    setIsRefreshing(true);
-    setLoadError("");
-
-    try {
-      const query = source === "cache" ? "cache=1" : "refresh=1";
-      const res = await fetch(`/api/games?${query}`, { cache: "no-store" });
-      const payload = (await res.json()) as {
-        games?: RawGame[];
-        source?: "live" | "cache";
-        error?: string;
-      };
-
-      if (!res.ok) {
-        throw new Error(payload.error || "Failed to load SportPesa matches");
+  const loadGames = useCallback(
+    async (source: "live" | "cache") => {
+      if (isBusy) {
+        return;
       }
 
-      const liveGames = Array.isArray(payload.games) ? payload.games : [];
-      const formatted = formatAndIdentifyGames(liveGames);
-      setFetchedClassified(formatted);
-      setOverrides((current) => {
-        const otherIds = new Set([
-          ...formatted.others.map((game) => game.id),
-          ...identifyGames(manualGames).others.map((game) => game.id),
-        ]);
-        return Object.fromEntries(
-          Object.entries(current).filter(([id]) => otherIds.has(id)),
+      setIsRefreshing(true);
+      setLoadError("");
+
+      try {
+        const query = source === "cache" ? "cache=1" : "refresh=1";
+        const res = await fetch(`/api/games?${query}`, { cache: "no-store" });
+        const payload = (await res.json()) as {
+          games?: RawGame[];
+          source?: "live" | "cache";
+          error?: string;
+        };
+
+        if (!res.ok) {
+          throw new Error(payload.error || "Failed to load SportPesa matches");
+        }
+
+        const liveGames = Array.isArray(payload.games) ? payload.games : [];
+        const formatted = formatAndIdentifyGames(liveGames);
+        setFetchedClassified(formatted);
+        setOverrides((current) => {
+          const otherIds = new Set([
+            ...formatted.others.map((game) => game.id),
+            ...identifyGames(manualGames).others.map((game) => game.id),
+          ]);
+          return Object.fromEntries(
+            Object.entries(current).filter(([id]) => otherIds.has(id)),
+          );
+        });
+        syncSelections(
+          flattenIdentifiedGames(
+            mergeIdentifiedGames(formatted, identifyGames(manualGames)),
+          ),
         );
-      });
-      syncSelections(
-        flattenIdentifiedGames(
-          mergeIdentifiedGames(formatted, identifyGames(manualGames)),
-        ),
-      );
-      setGamesSource(payload.source ?? "live");
-    } catch (error) {
-      setGamesSource("error");
-      setLoadError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load SportPesa matches",
-      );
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+        setGamesSource(payload.source ?? "live");
+      } catch (error) {
+        setGamesSource("error");
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load SportPesa matches",
+        );
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [isBusy, manualGames],
+  );
+
+  useEffect(() => {
+    loadGames("cache");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div
@@ -1208,32 +1219,38 @@ export default function Home() {
                 />
               ) : null}
               {isRefreshing
-                ? "Refreshing matches…"
+                ? "Loading matches…"
                 : gamesSource === "live"
                   ? "Live SportPesa matches loaded"
                   : gamesSource === "cache"
-                    ? "Using cached SportPesa matches"
+                    ? isVercel
+                      ? "SportPesa matches loaded (scheduled sync)"
+                      : "Using cached SportPesa matches"
                     : gamesSource === "error"
                       ? loadError || "Could not load SportPesa matches"
-                      : "Click Refresh to load SportPesa.com matches"}
+                      : isVercel
+                        ? "Loading matches…"
+                        : "Click Refresh to load SportPesa.com matches"}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <ThemeSwitcher />
-            <button
-              type="button"
-              onClick={() => loadGames("live")}
-              disabled={isBusy}
-              aria-busy={isBusy}
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:border-blue-400 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
-            >
-              <RefreshCw
-                size={14}
-                className={isBusy ? "animate-spin" : ""}
-                aria-hidden="true"
-              />
-              {isBusy ? "Loading" : "Refresh"}
-            </button>
+            {!isVercel ? (
+              <button
+                type="button"
+                onClick={() => loadGames("live")}
+                disabled={isBusy}
+                aria-busy={isBusy}
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:border-blue-400 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+              >
+                <RefreshCw
+                  size={14}
+                  className={isBusy ? "animate-spin" : ""}
+                  aria-hidden="true"
+                />
+                {isBusy ? "Loading" : "Refresh"}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => loadGames("cache")}
@@ -1241,7 +1258,7 @@ export default function Home() {
               className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:border-blue-400 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
             >
               <Database size={14} aria-hidden="true" />
-              Load cache
+              {isVercel ? "Reload data" : "Load cache"}
             </button>
           </div>
         </div>
