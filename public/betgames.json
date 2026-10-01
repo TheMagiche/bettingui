@@ -1,73 +1,10 @@
 [
   {
-    "home_team": "Guinea",
-    "away_team": "Kenya",
-    "home_win": 1.56,
-    "draw": 3.55,
-    "away_win": 6.8,
-    "boosted": true,
-    "kickoff": "2026-10-01T16:00:00+00:00"
-  },
-  {
-    "home_team": "Wales",
-    "away_team": "Norway",
-    "home_win": 6.4,
-    "draw": 4.8,
-    "away_win": 1.44,
-    "boosted": true,
-    "kickoff": "2026-10-01T18:45:00+00:00"
-  },
-  {
-    "home_team": "Germany",
-    "away_team": "Serbia",
-    "home_win": 1.21,
-    "draw": 6.9,
-    "away_win": 11.5,
-    "boosted": true,
-    "kickoff": "2026-10-01T18:45:00+00:00"
-  },
-  {
-    "home_team": "Denmark",
-    "away_team": "Portugal",
-    "home_win": 3.35,
-    "draw": 3.65,
-    "away_win": 2.06,
-    "boosted": true,
-    "kickoff": "2026-10-01T18:45:00+00:00"
-  },
-  {
-    "home_team": "Greece",
-    "away_team": "Netherlands",
-    "home_win": 3.3,
-    "draw": 3.55,
-    "away_win": 2.11,
-    "boosted": true,
-    "kickoff": "2026-10-01T18:45:00+00:00"
-  },
-  {
-    "home_team": "Manchester City W",
-    "away_team": "Real Madrid W",
-    "home_win": 1.66,
-    "draw": 4.3,
-    "away_win": 4.4,
-    "boosted": true,
-    "kickoff": "2026-10-01T19:00:00+00:00"
-  },
-  {
-    "home_team": "Paris Saint Germain W",
-    "away_team": "OH Leuven W",
-    "home_win": 1.18,
-    "draw": 7.4,
-    "away_win": 14.0,
-    "boosted": true,
-    "kickoff": "2026-10-01T19:00:00+00:00"
-  },
-  {
     "home_team": "Latvia",
     "away_team": "Montenegro",
-    "home_win": 4.5,
-    "draw": 3.45,
-    "away_win": 1.82,
+    "home_win": 4.36,
+    "draw": 3.39,
+    "away_win": 1.88,
     "boosted": true,
     "kickoff": "2026-10-02T16:00:00+00:00"
   },
@@ -83,36 +20,36 @@
   {
     "home_team": "Poland",
     "away_team": "Romania",
-    "home_win": 1.56,
-    "draw": 4.2,
-    "away_win": 5.6,
+    "home_win": 1.54,
+    "draw": 4.3,
+    "away_win": 5.8,
     "boosted": true,
     "kickoff": "2026-10-02T18:45:00+00:00"
   },
   {
     "home_team": "France",
     "away_team": "Italy",
-    "home_win": 1.43,
-    "draw": 4.9,
-    "away_win": 6.4,
+    "home_win": 1.44,
+    "draw": 5.0,
+    "away_win": 6.2,
     "boosted": true,
     "kickoff": "2026-10-02T18:45:00+00:00"
   },
   {
     "home_team": "Bosnia and Herzegovina",
     "away_team": "Sweden",
-    "home_win": 2.8,
-    "draw": 3.55,
-    "away_win": 2.39,
+    "home_win": 2.65,
+    "draw": 3.5,
+    "away_win": 2.5,
     "boosted": true,
     "kickoff": "2026-10-02T18:45:00+00:00"
   },
   {
     "home_team": "Ukraine",
     "away_team": "Northern Ireland",
-    "home_win": 1.96,
-    "draw": 3.35,
-    "away_win": 4.0,
+    "home_win": 1.93,
+    "draw": 3.3,
+    "away_win": 4.1,
     "boosted": true,
     "kickoff": "2026-10-02T18:45:00+00:00"
   },
@@ -137,18 +74,18 @@
   {
     "home_team": "Croatia",
     "away_team": "England",
-    "home_win": 3.8,
-    "draw": 3.7,
-    "away_win": 1.91,
+    "home_win": 3.85,
+    "draw": 3.8,
+    "away_win": 1.87,
     "boosted": true,
     "kickoff": "2026-10-03T16:00:00+00:00"
   },
   {
     "home_team": "North Macedonia",
     "away_team": "Scotland",
-    "home_win": 4.9,
-    "draw": 3.5,
-    "away_win": 1.75,
+    "home_win": 4.7,
+    "draw": 3.55,
+    "away_win": 1.77,
     "boosted": true,
     "kickoff": "2026-10-03T18:45:00+00:00"
   },
@@ -157,7 +94,7 @@
     "away_team": "Czech Republic",
     "home_win": 1.07,
     "draw": 11.0,
-    "away_win": 29.0,
+    "away_win": 28.0,
     "boosted": true,
     "kickoff": "2026-10-03T18:45:00+00:00"
   },
@@ -182,36 +119,36 @@
   {
     "home_team": "Greece",
     "away_team": "Germany",
-    "home_win": 3.16,
-    "draw": 3.45,
-    "away_win": 2.11,
+    "home_win": 3.59,
+    "draw": 3.49,
+    "away_win": 1.93,
     "boosted": true,
     "kickoff": "2026-10-04T18:45:00+00:00"
   },
   {
     "home_team": "Portugal",
     "away_team": "Norway",
-    "home_win": 1.82,
-    "draw": 3.9,
-    "away_win": 3.7,
+    "home_win": 1.66,
+    "draw": 4.1,
+    "away_win": 4.2,
     "boosted": true,
     "kickoff": "2026-10-04T18:45:00+00:00"
   },
   {
     "home_team": "Wales",
     "away_team": "Denmark",
-    "home_win": 3.95,
-    "draw": 3.75,
-    "away_win": 1.78,
+    "home_win": 3.65,
+    "draw": 3.6,
+    "away_win": 1.89,
     "boosted": true,
     "kickoff": "2026-10-04T18:45:00+00:00"
   },
   {
     "home_team": "Ireland",
     "away_team": "Israel",
-    "home_win": 1.88,
-    "draw": 3.5,
-    "away_win": 3.85,
+    "home_win": 2.0,
+    "draw": 3.35,
+    "away_win": 3.55,
     "boosted": true,
     "kickoff": "2026-10-04T18:45:00+00:00"
   },
@@ -290,8 +227,8 @@
   {
     "home_team": "Inter",
     "away_team": "Parma FC",
-    "home_win": 1.16,
-    "draw": 8.6,
+    "home_win": 1.15,
+    "draw": 8.8,
     "away_win": 17.0,
     "boosted": true,
     "kickoff": "2026-10-10T16:00:00+00:00"
@@ -299,7 +236,7 @@
   {
     "home_team": "Barcelona",
     "away_team": "Getafe",
-    "home_win": 1.07,
+    "home_win": 1.06,
     "draw": 14.0,
     "away_win": 35.0,
     "boosted": true,
@@ -326,8 +263,8 @@
   {
     "home_team": "Paris St Germain",
     "away_team": "Le Mans",
-    "home_win": 1.08,
-    "draw": 13.0,
+    "home_win": 1.07,
+    "draw": 14.0,
     "away_win": 28.0,
     "boosted": true,
     "kickoff": "2026-10-10T18:45:00+00:00"
@@ -435,8 +372,8 @@
     "home_team": "Inter",
     "away_team": "Brugge",
     "home_win": 1.29,
-    "draw": 6.0,
-    "away_win": 10.0,
+    "draw": 6.2,
+    "away_win": 9.8,
     "boosted": true,
     "kickoff": "2026-10-13T19:00:00+00:00"
   },
@@ -524,9 +461,9 @@
   {
     "home_team": "Betis",
     "away_team": "FC Porto",
-    "home_win": 2.17,
+    "home_win": 2.22,
     "draw": 3.65,
-    "away_win": 3.25,
+    "away_win": 3.15,
     "boosted": true,
     "kickoff": "2026-10-14T19:00:00+00:00"
   },
@@ -587,18 +524,18 @@
   {
     "home_team": "CSKA Sofia",
     "away_team": "Monaco",
-    "home_win": 6.2,
+    "home_win": 6.0,
     "draw": 4.6,
-    "away_win": 1.49,
+    "away_win": 1.51,
     "boosted": true,
     "kickoff": "2026-10-15T16:45:00+00:00"
   },
   {
     "home_team": "KAA Gent",
     "away_team": "AGF Aarhus",
-    "home_win": 1.62,
-    "draw": 4.1,
-    "away_win": 5.2,
+    "home_win": 1.69,
+    "draw": 4.0,
+    "away_win": 4.8,
     "boosted": true,
     "kickoff": "2026-10-15T16:45:00+00:00"
   },
@@ -614,9 +551,9 @@
   {
     "home_team": "Hajduk Split",
     "away_team": "Ajax",
-    "home_win": 5.8,
-    "draw": 4.7,
-    "away_win": 1.5,
+    "home_win": 5.6,
+    "draw": 4.6,
+    "away_win": 1.52,
     "boosted": true,
     "kickoff": "2026-10-15T16:45:00+00:00"
   },
@@ -750,7 +687,7 @@
     "home_team": "Manchester City",
     "away_team": "Ipswich",
     "home_win": 1.23,
-    "draw": 6.6,
+    "draw": 6.8,
     "away_win": 10.0,
     "boosted": true,
     "kickoff": "2026-10-17T14:00:00+00:00"
@@ -999,572 +936,20 @@
     "kickoff": "2026-10-29T19:45:00+00:00"
   },
   {
-    "home_team": "Juve Stabia",
-    "away_team": "US Palmese 1914",
-    "home_win": 1.02,
-    "draw": 10.0,
-    "away_win": 21.0,
-    "kickoff": "2026-10-01T13:00:00.000Z"
-  },
-  {
-    "home_team": "Dunajska Streda",
-    "away_team": "Puskas Akademia",
-    "home_win": 3.1,
-    "draw": 3.35,
-    "away_win": 1.96,
-    "kickoff": "2026-10-01T13:00:00.000Z"
-  },
-  {
-    "home_team": "Dubai United FC",
-    "away_team": "Hatta Club",
-    "home_win": 1.97,
-    "draw": 3.65,
-    "away_win": 3.0,
-    "kickoff": "2026-10-01T13:15:00.000Z"
-  },
-  {
-    "home_team": "Al Sharjah SC",
-    "away_team": "Al Dhafra",
-    "home_win": 1.52,
-    "draw": 4.2,
-    "away_win": 4.5,
-    "kickoff": "2026-10-01T13:15:00.000Z"
-  },
-  {
-    "home_team": "Croatia U19",
-    "away_team": "Italy U19",
-    "home_win": 2.7,
-    "draw": 3.25,
-    "away_win": 2.25,
-    "kickoff": "2026-10-01T13:30:00.000Z"
-  },
-  {
-    "home_team": "Hapoel Bnei Jat United",
-    "away_team": "Maccabi Nujeidat Ahmad",
-    "home_win": 3.2,
-    "draw": 3.6,
-    "away_win": 1.89,
-    "kickoff": "2026-10-01T13:30:00.000Z"
-  },
-  {
-    "home_team": "Uzbekistan",
-    "away_team": "Syria",
-    "home_win": 1.53,
-    "draw": 4.0,
-    "away_win": 6.4,
-    "kickoff": "2026-10-01T14:00:00.000Z"
-  },
-  {
-    "home_team": "Maldives",
-    "away_team": "Lebanon",
-    "home_win": 40.0,
-    "draw": 11.0,
-    "away_win": 1.06,
-    "kickoff": "2026-10-01T14:00:00.000Z"
-  },
-  {
-    "home_team": "VfL Wolfsburg",
-    "away_team": "TSV Havelse",
-    "home_win": 1.09,
-    "draw": 7.6,
-    "away_win": 13.0,
-    "kickoff": "2026-10-01T14:00:00.000Z"
-  },
-  {
-    "home_team": "Faroe Islands U19",
-    "away_team": "Slovenia U19",
-    "home_win": 16.0,
-    "draw": 8.6,
-    "away_win": 1.06,
-    "kickoff": "2026-10-01T14:00:00.000Z"
-  },
-  {
-    "home_team": "Qatar U19",
-    "away_team": "Ireland U19",
-    "home_win": 5.4,
-    "draw": 4.1,
-    "away_win": 1.45,
-    "kickoff": "2026-10-01T14:00:00.000Z"
-  },
-  {
-    "home_team": "San Francisco FC B",
-    "away_team": "CD Universitario II",
-    "home_win": 1.82,
-    "draw": 3.5,
-    "away_win": 3.5,
-    "kickoff": "2026-10-01T14:00:00.000Z"
-  },
-  {
-    "home_team": "Greece U21",
-    "away_team": "Latvia U21",
-    "home_win": 1.05,
-    "draw": 8.4,
-    "away_win": 19.0,
-    "kickoff": "2026-10-01T15:00:00.000Z"
-  },
-  {
-    "home_team": "Gharrafa SC",
-    "away_team": "Al Mesaimeer",
-    "home_win": 1.73,
-    "draw": 3.75,
-    "away_win": 3.65,
-    "kickoff": "2026-10-01T15:00:00.000Z"
-  },
-  {
-    "home_team": "Stuttgart",
-    "away_team": "Greuther Furth",
-    "home_win": 1.18,
-    "draw": 6.2,
-    "away_win": 8.6,
-    "kickoff": "2026-10-01T15:30:00.000Z"
-  },
-  {
-    "home_team": "Maccabi Yavne",
-    "away_team": "Ironi Beit Shemesh",
-    "home_win": 1.45,
-    "draw": 4.0,
-    "away_win": 5.8,
-    "kickoff": "2026-10-01T15:30:00.000Z"
-  },
-  {
-    "home_team": "Baniyas",
-    "away_team": "AL Wahda Scc (UAE)",
-    "home_win": 3.45,
-    "draw": 3.65,
-    "away_win": 1.82,
-    "kickoff": "2026-10-01T15:45:00.000Z"
-  },
-  {
-    "home_team": "Azerbaijan",
-    "away_team": "Liechtenstein",
-    "home_win": 1.09,
-    "draw": 8.8,
-    "away_win": 30.0,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Macedonia U21",
-    "away_team": "Montenegro U21",
-    "home_win": 2.75,
-    "draw": 3.15,
-    "away_win": 2.29,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "USA U20",
-    "away_team": "Brazil U20",
-    "home_win": 4.3,
-    "draw": 3.9,
-    "away_win": 1.58,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Morocco U23",
-    "away_team": "Mali U23",
-    "home_win": 1.69,
-    "draw": 3.5,
-    "away_win": 4.1,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Asante Kotoko",
-    "away_team": "Karela FC",
-    "home_win": 1.69,
-    "draw": 3.3,
-    "away_win": 4.4,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "MS Football Hapoel Kiryat Yam",
-    "away_team": "Hapoel Kfar Saba",
-    "home_win": 1.66,
-    "draw": 3.9,
-    "away_win": 3.85,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Ahi Nazareth",
-    "away_team": "Ironi Modiin",
-    "home_win": 2.2,
-    "draw": 3.25,
-    "away_win": 2.8,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Hapoel Afula",
-    "away_team": "Hapoel Rishon Lezion",
-    "home_win": 2.9,
-    "draw": 3.4,
-    "away_win": 2.07,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Maccabi Jaffa",
-    "away_team": "Hapoel Acre",
-    "home_win": 1.64,
-    "draw": 3.7,
-    "away_win": 4.1,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Maccabi Bney Reine",
-    "away_team": "Hapoel Kfar Shelem",
-    "home_win": 1.88,
-    "draw": 3.6,
-    "away_win": 3.25,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "FC Ashdod",
-    "away_team": "Maccabi Herzliya",
-    "home_win": 1.44,
-    "draw": 4.2,
-    "away_win": 5.4,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Bnei Yehuda",
-    "away_team": "Maccabi Kiiryat Gat",
-    "home_win": 1.26,
-    "draw": 5.0,
-    "away_win": 7.8,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Hapoel Raanana",
-    "away_team": "SC Kfar Qasem",
-    "home_win": 1.85,
-    "draw": 3.45,
-    "away_win": 3.45,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Maccabi Ironi Sderot",
-    "away_team": "Hapoel Azur",
-    "home_win": 1.98,
-    "draw": 3.2,
-    "away_win": 3.4,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Jerash",
-    "away_team": "Al Ahli Amman",
-    "home_win": 2.38,
-    "draw": 3.0,
-    "away_win": 2.7,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Al-Yarmouk",
-    "away_team": "DAR AL Dawa",
-    "home_win": 2.65,
-    "draw": 2.9,
-    "away_win": 2.5,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Ittihad AL Ramtha",
-    "away_team": "Sama AL Sarhan",
-    "home_win": 2.28,
-    "draw": 2.95,
-    "away_win": 2.95,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Baerum",
-    "away_team": "Lillestrom",
-    "home_win": 19.0,
-    "draw": 8.6,
-    "away_win": 1.05,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Madla",
-    "away_team": "Viking",
-    "home_win": 16.0,
-    "draw": 9.2,
-    "away_win": 1.05,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "MKS Podlasie Biala Podlaska",
-    "away_team": "Star Starachowice",
-    "home_win": 2.07,
-    "draw": 3.4,
-    "away_win": 2.95,
-    "kickoff": "2026-10-01T16:00:00.000Z"
-  },
-  {
-    "home_team": "Armenia U21",
-    "away_team": "Italy U21",
-    "home_win": 21.0,
-    "draw": 9.0,
-    "away_win": 1.04,
-    "kickoff": "2026-10-01T16:30:00.000Z"
-  },
-  {
-    "home_team": "Hapoel Tirat Hacarmel",
-    "away_team": "Maccabi Umm al-Fahm",
-    "home_win": 2.35,
-    "draw": 3.3,
-    "away_win": 2.55,
-    "kickoff": "2026-10-01T16:30:00.000Z"
-  },
-  {
-    "home_team": "El Fahem",
-    "away_team": "Hapoel Karmiel FC",
-    "home_win": 2.65,
-    "draw": 3.15,
-    "away_win": 2.35,
-    "kickoff": "2026-10-01T16:30:00.000Z"
-  },
-  {
-    "home_team": "MK KFAR Saba 1928",
-    "away_team": "Hapoel Marmorek",
-    "home_win": 1.99,
-    "draw": 3.1,
-    "away_win": 3.55,
-    "kickoff": "2026-10-01T16:30:00.000Z"
-  },
-  {
-    "home_team": "HB Koege W",
-    "away_team": "Servette FC Chenois W",
-    "home_win": 1.33,
-    "draw": 5.4,
-    "away_win": 8.0,
-    "kickoff": "2026-10-01T16:45:00.000Z"
-  },
-  {
-    "home_team": "USC Landhaus W",
-    "away_team": "Inter Milan W",
-    "home_win": 3.95,
-    "draw": 3.75,
-    "away_win": 1.85,
-    "kickoff": "2026-10-01T16:45:00.000Z"
-  },
-  {
-    "home_team": "SPG Weisskirchen Allhaming",
-    "away_team": "Voecklamarkt",
-    "home_win": 1.4,
-    "draw": 4.6,
-    "away_win": 5.4,
-    "kickoff": "2026-10-01T16:45:00.000Z"
-  },
-  {
-    "home_team": "Hungary U21",
-    "away_team": "Lithuania U21",
-    "home_win": 1.42,
-    "draw": 4.1,
-    "away_win": 5.8,
-    "kickoff": "2026-10-01T17:00:00.000Z"
-  },
-  {
-    "home_team": "Qatar SC",
-    "away_team": "AL Bidda SC",
-    "home_win": 1.59,
-    "draw": 4.0,
-    "away_win": 4.1,
-    "kickoff": "2026-10-01T17:15:00.000Z"
-  },
-  {
-    "home_team": "Al-Shamal",
-    "away_team": "Muaither SC",
-    "home_win": 1.49,
-    "draw": 4.1,
-    "away_win": 4.9,
-    "kickoff": "2026-10-01T17:15:00.000Z"
-  },
-  {
-    "home_team": "UD Santa Marta Tormes",
-    "away_team": "CF Salmantino",
-    "home_win": 3.3,
-    "draw": 2.95,
-    "away_win": 2.09,
-    "kickoff": "2026-10-01T17:30:00.000Z"
-  },
-  {
-    "home_team": "SKN St. Polten II",
-    "away_team": "SC Zwettl",
-    "home_win": 3.75,
-    "draw": 3.95,
-    "away_win": 1.67,
-    "kickoff": "2026-10-01T17:30:00.000Z"
-  },
-  {
-    "home_team": "FC Rio de Janeiro RJ",
-    "away_team": "Barra Mansa FC RJ",
-    "home_win": 3.15,
-    "draw": 3.2,
-    "away_win": 2.04,
-    "kickoff": "2026-10-01T18:00:00.000Z"
-  },
-  {
-    "home_team": "Cardoso Moreira RJ",
-    "away_team": "Serra Macaense FC RJ",
-    "home_win": 2.1,
-    "draw": 3.2,
-    "away_win": 3.0,
-    "kickoff": "2026-10-01T18:00:00.000Z"
-  },
-  {
-    "home_team": "SE Buzios RJ",
-    "away_team": "SE Paraty RJ",
-    "home_win": 2.95,
-    "draw": 3.15,
-    "away_win": 2.15,
-    "kickoff": "2026-10-01T18:00:00.000Z"
-  },
-  {
-    "home_team": "SE Belford Roxo RJ",
-    "away_team": "Santa Cruz FC RJ",
-    "home_win": 2.85,
-    "draw": 3.1,
-    "away_win": 2.24,
-    "kickoff": "2026-10-01T18:00:00.000Z"
-  },
-  {
-    "home_team": "CD Fas U20",
-    "away_team": "AD Isidro Metapan U20",
-    "home_win": 1.85,
-    "draw": 3.45,
-    "away_win": 3.45,
-    "kickoff": "2026-10-01T18:00:00.000Z"
-  },
-  {
-    "home_team": "CD Fuerte San Francisco U20",
-    "away_team": "CD Luis Angel Firpo U20",
-    "home_win": 2.37,
-    "draw": 3.4,
-    "away_win": 2.47,
-    "kickoff": "2026-10-01T18:30:00.000Z"
-  },
-  {
-    "home_team": "Israel",
-    "away_team": "Kosovo",
-    "home_win": 2.95,
-    "draw": 3.4,
-    "away_win": 2.35,
-    "kickoff": "2026-10-01T18:45:00.000Z"
-  },
-  {
-    "home_team": "Ireland",
-    "away_team": "Austria",
-    "home_win": 3.45,
-    "draw": 3.2,
-    "away_win": 2.19,
-    "kickoff": "2026-10-01T18:45:00.000Z"
-  },
-  {
-    "home_team": "Malta",
-    "away_team": "Gibraltar",
-    "home_win": 1.25,
-    "draw": 5.4,
-    "away_win": 13.0,
-    "kickoff": "2026-10-01T18:45:00.000Z"
-  },
-  {
-    "home_team": "Bastia",
-    "away_team": "Orleans",
-    "home_win": 2.1,
-    "draw": 3.1,
-    "away_win": 3.1,
-    "kickoff": "2026-10-01T18:45:00.000Z"
-  },
-  {
-    "home_team": "Northern Ireland U21",
-    "away_team": "Georgia U21",
-    "home_win": 1.88,
-    "draw": 3.15,
-    "away_win": 3.7,
-    "kickoff": "2026-10-01T18:45:00.000Z"
-  },
-  {
-    "home_team": "Virgin Islands, British",
-    "away_team": "Montserrat",
-    "home_win": 18.0,
-    "draw": 8.0,
-    "away_win": 1.11,
-    "kickoff": "2026-10-01T20:00:00.000Z"
-  },
-  {
-    "home_team": "Virgin Islands, U.s.",
-    "away_team": "Saint-Martin",
-    "home_win": 10.0,
-    "draw": 6.2,
-    "away_win": 1.22,
-    "kickoff": "2026-10-01T20:00:00.000Z"
-  },
-  {
-    "home_team": "Envigado FC",
-    "away_team": "Orsomarso",
-    "home_win": 1.65,
-    "draw": 3.25,
-    "away_win": 4.9,
-    "kickoff": "2026-10-01T20:30:00.000Z"
-  },
-  {
-    "home_team": "Cumbaya FC",
-    "away_team": "Vargas Torres",
-    "home_win": 1.86,
-    "draw": 3.0,
-    "away_win": 4.0,
-    "kickoff": "2026-10-01T20:30:00.000Z"
-  },
-  {
-    "home_team": "Dominica",
-    "away_team": "Guyana",
-    "home_win": 11.0,
-    "draw": 6.0,
-    "away_win": 1.22,
-    "kickoff": "2026-10-01T21:00:00.000Z"
-  },
-  {
-    "home_team": "CD Fuerte San Francisco Morazan",
-    "away_team": "Firpo",
-    "home_win": 5.4,
-    "draw": 3.75,
-    "away_win": 1.5,
-    "kickoff": "2026-10-01T21:30:00.000Z"
-  },
-  {
-    "home_team": "Curacao",
-    "away_team": "Trinidad and Tobago",
-    "home_win": 1.52,
-    "draw": 4.2,
-    "away_win": 5.4,
-    "kickoff": "2026-10-01T22:00:00.000Z"
-  },
-  {
-    "home_team": "Fortaleza CE U20",
-    "away_team": "Ceara CE U20",
-    "home_win": 1.72,
-    "draw": 3.4,
-    "away_win": 4.1,
-    "kickoff": "2026-10-01T22:00:00.000Z"
-  },
-  {
-    "home_team": "Flamengo PI",
-    "away_team": "Comercial PI",
-    "home_win": 2.8,
-    "draw": 3.2,
-    "away_win": 2.22,
-    "kickoff": "2026-10-01T22:00:00.000Z"
-  },
-  {
-    "home_team": "Olimpia Asuncion",
-    "away_team": "Sportivo Luqueno",
-    "home_win": 1.37,
-    "draw": 4.2,
-    "away_win": 6.6,
-    "kickoff": "2026-10-01T22:00:00.000Z"
-  },
-  {
     "home_team": "Bolivar",
     "away_team": "GV Club Deportivo San Jose de Oruro",
     "home_win": 1.06,
     "draw": 8.6,
-    "away_win": 17.0,
+    "away_win": 16.0,
     "kickoff": "2026-10-01T22:30:00.000Z"
+  },
+  {
+    "home_team": "Anguilla",
+    "away_team": "Antigua and Barbuda",
+    "home_win": 15.0,
+    "draw": 7.8,
+    "away_win": 1.13,
+    "kickoff": "2026-10-01T23:00:00.000Z"
   },
   {
     "home_team": "Alianza FC II",
@@ -1577,121 +962,121 @@
   {
     "home_team": "Athletic Club Sjdr MG",
     "away_team": "Sport Recife",
-    "home_win": 2.3,
-    "draw": 2.95,
-    "away_win": 2.9,
+    "home_win": 2.12,
+    "draw": 3.0,
+    "away_win": 3.2,
     "kickoff": "2026-10-01T23:30:00.000Z"
   },
   {
     "home_team": "Dominican Republic",
     "away_team": "Haiti",
-    "home_win": 3.15,
-    "draw": 3.65,
-    "away_win": 2.04,
+    "home_win": 3.95,
+    "draw": 3.85,
+    "away_win": 1.76,
     "kickoff": "2026-10-02T00:00:00.000Z"
   },
   {
     "home_team": "Cayman Islands",
     "away_team": "Puerto Rico",
-    "home_win": 25.0,
-    "draw": 9.6,
+    "home_win": 26.0,
+    "draw": 9.4,
     "away_win": 1.07,
     "kickoff": "2026-10-02T00:00:00.000Z"
   },
   {
     "home_team": "Novorizontino SP",
     "away_team": "Goias",
-    "home_win": 1.57,
-    "draw": 3.6,
-    "away_win": 4.9,
+    "home_win": 1.55,
+    "draw": 3.65,
+    "away_win": 5.0,
     "kickoff": "2026-10-02T00:00:00.000Z"
   },
   {
     "home_team": "CD Inca",
     "away_team": "CD Municipal Limeno",
-    "home_win": 3.55,
-    "draw": 3.3,
-    "away_win": 1.88,
+    "home_win": 3.6,
+    "draw": 3.4,
+    "away_win": 1.83,
     "kickoff": "2026-10-02T00:00:00.000Z"
   },
   {
     "home_team": "CA Platense",
     "away_team": "Estudiantes LP",
-    "home_win": 4.0,
-    "draw": 2.8,
-    "away_win": 1.95,
+    "home_win": 3.4,
+    "draw": 2.7,
+    "away_win": 2.2,
     "kickoff": "2026-10-02T00:15:00.000Z"
   },
   {
     "home_team": "Blooming",
     "away_team": "Independiente Petrolero",
-    "home_win": 1.58,
-    "draw": 3.95,
-    "away_win": 4.3,
+    "home_win": 1.52,
+    "draw": 4.2,
+    "away_win": 4.5,
     "kickoff": "2026-10-02T00:30:00.000Z"
-  },
-  {
-    "home_team": "Internacional de Bogota.",
-    "away_team": "Once Caldas",
-    "home_win": 2.6,
-    "draw": 3.0,
-    "away_win": 2.5,
-    "kickoff": "2026-10-02T01:00:00.000Z"
   },
   {
     "home_team": "AF Sporting San Miguelito II",
     "away_team": "CD Plaza Amador",
-    "home_win": 2.9,
-    "draw": 3.35,
-    "away_win": 2.11,
+    "home_win": 2.85,
+    "draw": 3.45,
+    "away_win": 2.08,
     "kickoff": "2026-10-02T01:00:00.000Z"
   },
   {
     "home_team": "Arabe Unido B",
     "away_team": "San Martin FC",
-    "home_win": 1.6,
-    "draw": 3.7,
-    "away_win": 4.4,
+    "home_win": 1.58,
+    "draw": 3.75,
+    "away_win": 4.6,
     "kickoff": "2026-10-02T01:00:00.000Z"
   },
   {
     "home_team": "Seattle Sounders",
     "away_team": "Sporting Kansas City",
-    "home_win": 1.46,
-    "draw": 4.5,
-    "away_win": 4.9,
+    "home_win": 1.51,
+    "draw": 4.4,
+    "away_win": 4.6,
     "kickoff": "2026-10-02T01:30:00.000Z"
   },
   {
     "home_team": "Nicaragua",
     "away_team": "Costa Rica",
-    "home_win": 6.0,
-    "draw": 4.3,
-    "away_win": 1.47,
+    "home_win": 11.0,
+    "draw": 6.0,
+    "away_win": 1.22,
     "kickoff": "2026-10-02T02:00:00.000Z"
   },
   {
     "home_team": "China W",
     "away_team": "South Korea W",
-    "home_win": 3.9,
-    "draw": 3.6,
-    "away_win": 1.71,
+    "home_win": 3.55,
+    "draw": 3.5,
+    "away_win": 1.81,
     "kickoff": "2026-10-02T06:00:00.000Z"
   },
   {
     "home_team": "Gornik Zabrze",
     "away_team": "OKS Odra Opole",
-    "home_win": 1.23,
-    "draw": 5.2,
-    "away_win": 8.0,
+    "home_win": 1.28,
+    "draw": 4.9,
+    "away_win": 6.8,
     "kickoff": "2026-10-02T09:00:00.000Z"
   },
   {
     "home_team": "FC Zlin",
     "away_team": "SK Prostejov",
-    "home_win": 1.38,
-    "draw": 4.2,
-    "away_win": 6.0,
+    "home_win": 1.58,
+    "draw": 3.75,
+    "away_win": 4.3,
+    "kickoff": "2026-10-02T09:00:00.000Z"
+  },
+  {
+    "home_team": "Ruzomberok",
+    "away_team": "SFC Opava",
+    "home_win": 1.98,
+    "draw": 3.4,
+    "away_win": 3.05,
     "kickoff": "2026-10-02T09:00:00.000Z"
   },
   {
@@ -1721,56 +1106,56 @@
   {
     "home_team": "FC Lugano",
     "away_team": "Verona",
-    "home_win": 2.55,
-    "draw": 3.35,
-    "away_win": 2.28,
+    "home_win": 2.17,
+    "draw": 3.3,
+    "away_win": 2.7,
     "kickoff": "2026-10-02T09:30:00.000Z"
   },
   {
     "home_team": "Chanmari FC",
     "away_team": "Dinthar FC",
-    "home_win": 1.46,
-    "draw": 4.0,
-    "away_win": 5.4,
+    "home_win": 1.48,
+    "draw": 3.95,
+    "away_win": 5.2,
     "kickoff": "2026-10-02T09:30:00.000Z"
   },
   {
     "home_team": "Wisla Plock",
     "away_team": "Unia Skierniewice",
-    "home_win": 1.59,
-    "draw": 3.9,
+    "home_win": 1.61,
+    "draw": 3.75,
     "away_win": 4.1,
     "kickoff": "2026-10-02T10:00:00.000Z"
   },
   {
     "home_team": "Sparta Prague",
     "away_team": "Jihlava",
-    "home_win": 1.36,
-    "draw": 4.8,
-    "away_win": 5.4,
+    "home_win": 1.25,
+    "draw": 5.0,
+    "away_win": 7.4,
     "kickoff": "2026-10-02T10:00:00.000Z"
   },
   {
     "home_team": "Nurnberg",
     "away_team": "Ingolstadt",
-    "home_win": 1.73,
-    "draw": 3.5,
-    "away_win": 3.7,
+    "home_win": 1.47,
+    "draw": 3.85,
+    "away_win": 5.2,
     "kickoff": "2026-10-02T10:00:00.000Z"
   },
   {
     "home_team": "MIO Biwako Shiga",
     "away_team": "Roasso Kumamoto",
     "home_win": 2.65,
-    "draw": 3.1,
-    "away_win": 2.37,
+    "draw": 3.2,
+    "away_win": 2.34,
     "kickoff": "2026-10-02T10:00:00.000Z"
   },
   {
     "home_team": "Wales U19",
     "away_team": "Norway U19",
-    "home_win": 4.2,
-    "draw": 3.9,
+    "home_win": 4.1,
+    "draw": 4.0,
     "away_win": 1.6,
     "kickoff": "2026-10-02T10:00:00.000Z"
   },
@@ -1785,17 +1170,17 @@
   {
     "home_team": "Daejeon Korail",
     "away_team": "Gangneung City",
-    "home_win": 1.81,
-    "draw": 3.25,
-    "away_win": 3.85,
+    "home_win": 1.79,
+    "draw": 3.35,
+    "away_win": 3.8,
     "kickoff": "2026-10-02T10:00:00.000Z"
   },
   {
     "home_team": "Hyundai Steel W",
     "away_team": "Hwacheon Kspo W",
     "home_win": 4.3,
-    "draw": 3.45,
-    "away_win": 1.66,
+    "draw": 3.6,
+    "away_win": 1.64,
     "kickoff": "2026-10-02T10:00:00.000Z"
   },
   {
@@ -1809,17 +1194,17 @@
   {
     "home_team": "FK IMT Youth",
     "away_team": "Usce Novi Beograd U19",
-    "home_win": 1.44,
-    "draw": 4.4,
-    "away_win": 5.0,
+    "home_win": 1.41,
+    "draw": 4.5,
+    "away_win": 5.2,
     "kickoff": "2026-10-02T10:00:00.000Z"
   },
   {
     "home_team": "North Korea W",
     "away_team": "Japan W",
-    "home_win": 3.1,
-    "draw": 3.15,
-    "away_win": 2.1,
+    "home_win": 2.95,
+    "draw": 3.1,
+    "away_win": 2.18,
     "kickoff": "2026-10-02T10:30:00.000Z"
   },
   {
@@ -1831,19 +1216,43 @@
     "kickoff": "2026-10-02T11:00:00.000Z"
   },
   {
+    "home_team": "Augsburg",
+    "away_team": "Hertha BSC",
+    "home_win": 1.7,
+    "draw": 3.9,
+    "away_win": 3.5,
+    "kickoff": "2026-10-02T11:00:00.000Z"
+  },
+  {
+    "home_team": "Heidenheim",
+    "away_team": "Kickers Wurzburg",
+    "home_win": 1.34,
+    "draw": 4.6,
+    "away_win": 6.0,
+    "kickoff": "2026-10-02T11:00:00.000Z"
+  },
+  {
+    "home_team": "CS Corvinul 1921 Hunedoara",
+    "away_team": "ACS Viitorul Selimbar",
+    "home_win": 1.32,
+    "draw": 4.8,
+    "away_win": 6.2,
+    "kickoff": "2026-10-02T11:00:00.000Z"
+  },
+  {
     "home_team": "China",
     "away_team": "Palestine",
-    "home_win": 2.55,
-    "draw": 3.6,
-    "away_win": 2.6,
+    "home_win": 2.65,
+    "draw": 3.45,
+    "away_win": 2.55,
     "kickoff": "2026-10-02T11:35:00.000Z"
   },
   {
     "home_team": "Sigma Olomouc",
     "away_team": "MSK Zilina",
-    "home_win": 2.05,
+    "home_win": 1.96,
     "draw": 3.5,
-    "away_win": 2.8,
+    "away_win": 3.0,
     "kickoff": "2026-10-02T12:00:00.000Z"
   },
   {
@@ -1865,41 +1274,617 @@
   {
     "home_team": "Tanta FC",
     "away_team": "Haras El Hodood",
-    "home_win": 3.45,
+    "home_win": 3.7,
     "draw": 2.55,
-    "away_win": 2.36,
+    "away_win": 2.24,
     "kickoff": "2026-10-02T12:30:00.000Z"
   },
   {
     "home_team": "Proxy SC",
     "away_team": "Telecom Egypt",
-    "home_win": 3.05,
-    "draw": 2.65,
-    "away_win": 2.47,
+    "home_win": 2.95,
+    "draw": 2.7,
+    "away_win": 2.55,
     "kickoff": "2026-10-02T12:30:00.000Z"
   },
   {
     "home_team": "El Daklyeh",
     "away_team": "Maleyat Kafr El Zayat",
-    "home_win": 3.45,
-    "draw": 2.65,
-    "away_win": 2.27,
+    "home_win": 3.35,
+    "draw": 2.7,
+    "away_win": 2.26,
     "kickoff": "2026-10-02T12:30:00.000Z"
   },
   {
     "home_team": "Kahroba AL Ismailia",
     "away_team": "Mega Sport Belqas",
     "home_win": 1.4,
-    "draw": 3.85,
-    "away_win": 7.4,
+    "draw": 3.95,
+    "away_win": 7.0,
     "kickoff": "2026-10-02T12:30:00.000Z"
   },
   {
     "home_team": "Baladiyyat AL Mehalla",
     "away_team": "Team FC Cairo",
     "home_win": 2.11,
-    "draw": 2.7,
-    "away_win": 3.75,
+    "draw": 2.75,
+    "away_win": 3.6,
     "kickoff": "2026-10-02T12:30:00.000Z"
+  },
+  {
+    "home_team": "Bangu AC RJ",
+    "away_team": "Nova Iguacu FC RJ",
+    "home_win": 1.91,
+    "draw": 3.15,
+    "away_win": 3.55,
+    "kickoff": "2026-10-02T13:00:00.000Z"
+  },
+  {
+    "home_team": "Boston City FC MG",
+    "away_team": "Nacional AC Muriae MG",
+    "home_win": 2.32,
+    "draw": 3.25,
+    "away_win": 2.7,
+    "kickoff": "2026-10-02T13:00:00.000Z"
+  },
+  {
+    "home_team": "Zaglebie Lubin U19",
+    "away_team": "Wisla Krakow U19",
+    "home_win": 2.05,
+    "draw": 3.8,
+    "away_win": 2.7,
+    "kickoff": "2026-10-02T13:00:00.000Z"
+  },
+  {
+    "home_team": "Al Ain",
+    "away_team": "Ajman Club",
+    "home_win": 1.3,
+    "draw": 4.8,
+    "away_win": 7.0,
+    "kickoff": "2026-10-02T13:15:00.000Z"
+  },
+  {
+    "home_team": "Al Wasl Dubai",
+    "away_team": "Ittihad Kalba",
+    "home_win": 1.32,
+    "draw": 4.7,
+    "away_win": 6.6,
+    "kickoff": "2026-10-02T13:15:00.000Z"
+  },
+  {
+    "home_team": "Belgium U19",
+    "away_team": "Northern Ireland U19",
+    "home_win": 1.28,
+    "draw": 5.0,
+    "away_win": 7.2,
+    "kickoff": "2026-10-02T13:30:00.000Z"
+  },
+  {
+    "home_team": "Albania U19",
+    "away_team": "Lithuania U19",
+    "home_win": 2.2,
+    "draw": 3.3,
+    "away_win": 2.75,
+    "kickoff": "2026-10-02T13:30:00.000Z"
+  },
+  {
+    "home_team": "Ramthar Veng FC",
+    "away_team": "Aizawl FC",
+    "home_win": 18.0,
+    "draw": 9.6,
+    "away_win": 1.04,
+    "kickoff": "2026-10-02T13:30:00.000Z"
+  },
+  {
+    "home_team": "Kazakhstan",
+    "away_team": "Moldova",
+    "home_win": 1.85,
+    "draw": 3.45,
+    "away_win": 4.3,
+    "kickoff": "2026-10-02T14:00:00.000Z"
+  },
+  {
+    "home_team": "England U19",
+    "away_team": "USA U19",
+    "home_win": 1.62,
+    "draw": 4.1,
+    "away_win": 3.85,
+    "kickoff": "2026-10-02T14:00:00.000Z"
+  },
+  {
+    "home_team": "Georgia U19",
+    "away_team": "Latvia U19",
+    "home_win": 2.18,
+    "draw": 3.3,
+    "away_win": 2.8,
+    "kickoff": "2026-10-02T14:00:00.000Z"
+  },
+  {
+    "home_team": "FK Minija",
+    "away_team": "FK Kauno Zalgiris B",
+    "home_win": 1.21,
+    "draw": 5.2,
+    "away_win": 9.8,
+    "kickoff": "2026-10-02T14:00:00.000Z"
+  },
+  {
+    "home_team": "Academia Costa Del Este",
+    "away_team": "Tauro FC II",
+    "home_win": 1.66,
+    "draw": 3.65,
+    "away_win": 4.1,
+    "kickoff": "2026-10-02T14:00:00.000Z"
+  },
+  {
+    "home_team": "FC Aarau",
+    "away_team": "BSC Young Boys",
+    "home_win": 6.6,
+    "draw": 4.9,
+    "away_win": 1.29,
+    "kickoff": "2026-10-02T14:30:00.000Z"
+  },
+  {
+    "home_team": "Tammeka Tartu",
+    "away_team": "Viimsi Jk",
+    "home_win": 1.57,
+    "draw": 4.2,
+    "away_win": 4.1,
+    "kickoff": "2026-10-02T15:00:00.000Z"
+  },
+  {
+    "home_team": "KS Wisloka Debica",
+    "away_team": "Pogon Sokol Lubaczow",
+    "home_win": 1.77,
+    "draw": 3.7,
+    "away_win": 3.5,
+    "kickoff": "2026-10-02T15:30:00.000Z"
+  },
+  {
+    "home_team": "Shabab AL Ahli Dubai Club",
+    "away_team": "Al Nasr Dubai",
+    "home_win": 1.61,
+    "draw": 3.5,
+    "away_win": 4.7,
+    "kickoff": "2026-10-02T15:45:00.000Z"
+  },
+  {
+    "home_team": "AL Khaleej Khor Fakkan",
+    "away_team": "Jazira Abu Dhabi",
+    "home_win": 4.9,
+    "draw": 4.1,
+    "away_win": 1.5,
+    "kickoff": "2026-10-02T15:45:00.000Z"
+  },
+  {
+    "home_team": "Cyprus",
+    "away_team": "Armenia",
+    "home_win": 2.28,
+    "draw": 3.35,
+    "away_win": 3.1,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Teplice",
+    "away_team": "Dynamo Dresden",
+    "home_win": 2.2,
+    "draw": 3.9,
+    "away_win": 2.38,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Rapid Bucuresti",
+    "away_team": "Genoa",
+    "home_win": 3.0,
+    "draw": 3.25,
+    "away_win": 2.03,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Slovenia U21",
+    "away_team": "Netherlands U21",
+    "home_win": 7.2,
+    "draw": 4.8,
+    "away_win": 1.3,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Austria U21",
+    "away_team": "Denmark U21",
+    "home_win": 2.65,
+    "draw": 3.2,
+    "away_win": 2.33,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Ukraine U21",
+    "away_team": "Croatia U21",
+    "home_win": 3.0,
+    "draw": 3.25,
+    "away_win": 2.1,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Serbia U21",
+    "away_team": "Russia U21",
+    "home_win": 2.65,
+    "draw": 3.3,
+    "away_win": 2.26,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Red Star Penzing",
+    "away_team": "TWL Elektra",
+    "home_win": 2.12,
+    "draw": 3.65,
+    "away_win": 2.65,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Gerasd. Stammersd.",
+    "away_team": "FC 1980 Wien",
+    "home_win": 2.55,
+    "draw": 3.65,
+    "away_win": 2.2,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Hranice",
+    "away_team": "SK Lisen B",
+    "home_win": 4.1,
+    "draw": 3.9,
+    "away_win": 1.62,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Dukla Prague",
+    "away_team": "Baumit Jablonec",
+    "home_win": 3.75,
+    "draw": 3.55,
+    "away_win": 1.75,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "TJ Hluboka Nad Vlatvou",
+    "away_team": "FK Krimice",
+    "home_win": 2.55,
+    "draw": 3.6,
+    "away_win": 2.24,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Hlucin",
+    "away_team": "Novy Jicin",
+    "home_win": 1.43,
+    "draw": 4.6,
+    "away_win": 5.0,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "PK-35 Vantaa W",
+    "away_team": "Honka W",
+    "home_win": 1.44,
+    "draw": 4.5,
+    "away_win": 4.9,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Hay AL Amir Hassan",
+    "away_team": "AL Hashemeya",
+    "home_win": 1.85,
+    "draw": 3.3,
+    "away_win": 3.65,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Al Sareeh",
+    "away_team": "FC Maan",
+    "home_win": 2.18,
+    "draw": 3.0,
+    "away_win": 3.0,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Dfk Dainava B",
+    "away_team": "Sveikata",
+    "home_win": 19.0,
+    "draw": 8.2,
+    "away_win": 1.06,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Hinna",
+    "away_team": "Staal Jorpeland",
+    "home_win": 1.74,
+    "draw": 4.2,
+    "away_win": 3.25,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "FUS Rabat",
+    "away_team": "Union Sportif Amal Tiznit",
+    "home_win": 1.7,
+    "draw": 3.35,
+    "away_win": 4.9,
+    "kickoff": "2026-10-02T16:00:00.000Z"
+  },
+  {
+    "home_team": "Saarbrucken",
+    "away_team": "Nancy",
+    "home_win": 2.46,
+    "draw": 3.4,
+    "away_win": 2.33,
+    "kickoff": "2026-10-02T16:30:00.000Z"
+  },
+  {
+    "home_team": "Bayer Leverkusen W",
+    "away_team": "Werder W",
+    "home_win": 1.61,
+    "draw": 4.0,
+    "away_win": 4.1,
+    "kickoff": "2026-10-02T16:30:00.000Z"
+  },
+  {
+    "home_team": "FK Garliava",
+    "away_team": "Dainava Alytus",
+    "home_win": 2.95,
+    "draw": 3.3,
+    "away_win": 2.11,
+    "kickoff": "2026-10-02T16:30:00.000Z"
+  },
+  {
+    "home_team": "Molde FK 2",
+    "away_team": "Herd",
+    "home_win": 2.32,
+    "draw": 4.2,
+    "away_win": 2.23,
+    "kickoff": "2026-10-02T16:30:00.000Z"
+  },
+  {
+    "home_team": "Luks Sportowa Czworka Radom W",
+    "away_team": "Sms Resovia Rzeszow",
+    "home_win": 3.1,
+    "draw": 4.1,
+    "away_win": 1.81,
+    "kickoff": "2026-10-02T16:30:00.000Z"
+  },
+  {
+    "home_team": "MSK Senec",
+    "away_team": "Spartak Myjava",
+    "home_win": 3.3,
+    "draw": 3.4,
+    "away_win": 1.91,
+    "kickoff": "2026-10-02T16:30:00.000Z"
+  },
+  {
+    "home_team": "Real Aviles",
+    "away_team": "Lugo",
+    "home_win": 2.28,
+    "draw": 3.1,
+    "away_win": 2.75,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Stade Briochin",
+    "away_team": "FC Lorient B",
+    "home_win": 1.97,
+    "draw": 3.05,
+    "away_win": 3.5,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Deportivo La Coruna",
+    "away_team": "FC Porto",
+    "home_win": 3.15,
+    "draw": 3.45,
+    "away_win": 1.92,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Laval",
+    "away_team": "Rennes",
+    "home_win": 5.0,
+    "draw": 4.0,
+    "away_win": 1.47,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Real Sociedad",
+    "away_team": "Athletic Bilbao",
+    "home_win": 2.12,
+    "draw": 3.3,
+    "away_win": 2.8,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "USV Gnas",
+    "away_team": "SC Furstenfeld",
+    "home_win": 1.7,
+    "draw": 3.85,
+    "away_win": 3.7,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "TUS Raiba Heiltherme Bad Waltersdorf",
+    "away_team": "FC Wm-Estriche Schladming",
+    "home_win": 2.32,
+    "draw": 3.6,
+    "away_win": 2.44,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Edelweiss Linz",
+    "away_team": "SV Gmundern Milch",
+    "home_win": 1.42,
+    "draw": 4.5,
+    "away_win": 5.2,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "SV Seekirchen",
+    "away_team": "Union Gurten",
+    "home_win": 3.25,
+    "draw": 3.75,
+    "away_win": 1.88,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Atus Velden",
+    "away_team": "SK Treibach",
+    "home_win": 1.97,
+    "draw": 3.6,
+    "away_win": 3.05,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "SC Gleisdorf",
+    "away_team": "SU Tillmitsch",
+    "home_win": 2.7,
+    "draw": 3.65,
+    "away_win": 2.16,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "VSK Arhus",
+    "away_team": "Brabrand IF",
+    "home_win": 1.93,
+    "draw": 3.35,
+    "away_win": 3.3,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Fremad Amager",
+    "away_team": "B 93 Copenhagen",
+    "home_win": 2.75,
+    "draw": 3.15,
+    "away_win": 2.27,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Naestved BK",
+    "away_team": "Nykobing FC",
+    "home_win": 2.65,
+    "draw": 3.25,
+    "away_win": 2.29,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Atlantis FC/Pm",
+    "away_team": "Ppj/Lauttasaari",
+    "home_win": 4.1,
+    "draw": 4.8,
+    "away_win": 1.49,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Pakkalan Palloseura",
+    "away_team": "FC Kontu",
+    "home_win": 4.7,
+    "draw": 4.9,
+    "away_win": 1.42,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "LPS Laajasalon",
+    "away_team": "Tips",
+    "home_win": 1.43,
+    "draw": 5.0,
+    "away_win": 4.5,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Toeoeloen Taisto",
+    "away_team": "Tote",
+    "home_win": 2.85,
+    "draw": 4.0,
+    "away_win": 1.93,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Hps/2",
+    "away_team": "Mps/Atletico Malmi",
+    "home_win": 3.25,
+    "draw": 4.0,
+    "away_win": 1.78,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Valtti",
+    "away_team": "Vantaan Jalkapalloseura 2",
+    "home_win": 2.01,
+    "draw": 4.1,
+    "away_win": 2.6,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Stuttgarter Kickers",
+    "away_team": "Kickers Offenbach",
+    "home_win": 2.1,
+    "draw": 3.35,
+    "away_win": 2.9,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "AL Aqaba",
+    "away_team": "Sahl Horan SC",
+    "home_win": 4.1,
+    "draw": 3.5,
+    "away_win": 1.7,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Rosenborg BK 2",
+    "away_team": "Melhus",
+    "home_win": 2.24,
+    "draw": 4.0,
+    "away_win": 2.36,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Ranheim",
+    "away_team": "Egersund IK",
+    "home_win": 1.99,
+    "draw": 3.7,
+    "away_win": 2.85,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "KS Polonia Nysa",
+    "away_team": "Miedz II",
+    "home_win": 3.05,
+    "draw": 3.6,
+    "away_win": 1.93,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Kungsangens IF",
+    "away_team": "Sunnersta AIF",
+    "home_win": 5.4,
+    "draw": 4.2,
+    "away_win": 1.46,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Staffanstorp United",
+    "away_team": "Solvesborgs Goif",
+    "home_win": 2.35,
+    "draw": 3.6,
+    "away_win": 2.46,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Lilla Torg FF",
+    "away_team": "Nosaby IF",
+    "home_win": 2.44,
+    "draw": 3.6,
+    "away_win": 2.37,
+    "kickoff": "2026-10-02T17:00:00.000Z"
+  },
+  {
+    "home_team": "Smedby Ais",
+    "away_team": "Nykoping Bis",
+    "home_win": 2.8,
+    "draw": 3.6,
+    "away_win": 2.14,
+    "kickoff": "2026-10-02T17:00:00.000Z"
   }
 ]
